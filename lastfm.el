@@ -142,22 +142,22 @@ equal or ampersand symbols between them."
           (elquery-$ (lastfm--query-str method)
                      (elquery-read-string response))))
 
-(defun lastfm-track-love (artist track)
-  (lastfm--parser
-   (lastfm--request track-love
-                    artist track)
-   track-love))
+(defun lastfm--build-function (method)
+  (let* ((name-str (symbol-name (lastfm--method-name method)))
+         (fn-name (intern (concat "lastfm-" name-str)))
+         (params (lastfm--method-params method)))
+    `(defun ,fn-name ,params
+       (lastfm--parser
+        (lastfm--request ',method
+                         ,@params)
+        ',method))))
 
-(defun lastfm-artist-getsimilar (artist)
-  (lastfm--parser
-   (lastfm--request (cl-third lastfm--methods)
-                    artist 3)
-   (cl-third lastfm--methods)))
+(defmacro lastfm--build-api ()
+  `(progn
+     ,@(mapcar (lambda (method)
+                 (lastfm--build-function method))
+               lastfm--methods)))
 
-(defun lastfm-artist-gettoptracks (artist)
-  (lastfm--parser
-   (lastfm--request (cl-sixth lastfm--methods)
-                    artist 3)
-   (cl-sixth lastfm--methods)))
+(lastfm--build-api)
 
 (provide 'lastfm)
