@@ -34,16 +34,15 @@
     (track-unlove        :auth     (artist track)  "lfm"                         )
     (track-scrobble      :auth     (artist track timestamp)  "lfm"               )
     ;; User
-    (user-getlovedtracks :no-auth  (user limit)    "artist > name, track > name" )
-    "List of all the supported lastfm methods."
-    ))
+    (user-getlovedtracks :no-auth  (user limit)    "artist > name, track > name" ))
+  "List of all the supported lastfm methods from which the API is generated")
 
 (defun lastfm--method-name (method)
   (cl-first method))
 
-(defun lastfm--method-name-string (method)
-  "A method name string in the format requested by the Last.fm
-API parameters"
+(defun lastfm--method-str (method)
+  "The method name, as a string that can be used in a lastfm
+request."
   (s-replace "-" "." (symbol-name (lastfm--method-name method))))
 
 (defun lastfm--auth-p (method)
@@ -54,10 +53,13 @@ API parameters"
   "Is this a method used for requesting the session key?"
   (eql (cl-second method) :sk))
 
-(defun lastfm--method-parameters (method)
+(defun lastfm--method-params (method)
+  "Parameters requested for succesfully calling this method."
   (cl-third method))
 
-(defun lastfm--query-string (method)
+(defun lastfm--query-str (method)
+  "XML query string for extracting the relevant data from the
+lastfm response."
   (cl-fourth method))
 
 (defun lastfm--multi-query-p (query)
@@ -102,11 +104,11 @@ equal or ampersand symbols between them."
   (let ((result
          `(;; The api key and method is needed for all calls.
            ("api_key" . ,lastfm--api-key)
-           ("method" . ,(lastfm--method-name-string method))
+           ("method" . ,(lastfm--method-str method))
            ;;Pair the user supplied values with the  method parameters.
            ,@(cl-mapcar (lambda (param value)
                           (cons (symbol-name param) value))
-                        (lastfm--method-parameters method)
+                        (lastfm--method-params method)
                         values))))
     ;; Session Key(SK) parameter is needed for all auth services, but not for
     ;; the services used to obtain the SK.
@@ -137,7 +139,7 @@ equal or ampersand symbols between them."
 
 (defun lastfm--parser (response method)
   (mapcar #'elquery-text
-          (elquery-$ (lastfm--query-string method)
+          (elquery-$ (lastfm--query-str method)
                      (elquery-read-string response))))
 
 (defun lastfm-track-love (artist track)
