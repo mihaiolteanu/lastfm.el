@@ -205,7 +205,7 @@ equal or ampersand symbols between them."
                          (setq resp data))))
     resp))
 
-(defun lastfm--parser (response method)
+(defun lastfm--parse-response (response method)
   (mapcar #'elquery-text
           (elquery-$ (lastfm--query-str method)
                      (elquery-read-string response))))
@@ -215,7 +215,7 @@ equal or ampersand symbols between them."
          (fn-name (intern (concat "lastfm-" name-str)))
          (params (lastfm--method-params method)))
     `(defun ,fn-name ,params
-       (lastfm--parser
+       (lastfm--parse-response
         (lastfm--request ',method
                          ,@params)
         ',method))))
