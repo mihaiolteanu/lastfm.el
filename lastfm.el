@@ -76,15 +76,15 @@ to access your Last.fm account? ")
 ;;;; Methods list, and functions for it's manipulation
 (defconst lastfm--methods-pretty
   '((album
-     (getinfo :no-auth (artist album) "track > name"))
+     (getinfo :no (artist album) "track > name"))
     
     (artist
-     (getinfo      :no-auth (artist)       "bio summary")
-     (getsimilar   :no-auth (artist limit) "artist name")
-     (gettoptags   :no-auth (artist)       "tag name")
-     (gettopalbums :no-auth (artist limit) "album > name")
-     (gettoptracks :no-auth (artist limit) "track > name")
-     (search       :no-auth (artist limit) "artist name"))
+     (getinfo      :no (artist)       "bio summary")
+     (getsimilar   :no (artist limit) "artist name")
+     (gettoptags   :no (artist)       "tag name")
+     (gettopalbums :no (artist limit) "album > name")
+     (gettoptracks :no (artist limit) "track > name")
+     (search       :no (artist limit) "artist name"))
     
     ;; Auth (only need to be called once, to get the session key (sk))
     (auth
@@ -92,14 +92,14 @@ to access your Last.fm account? ")
      (getsession :sk (token) "session key"))
     
     (tag
-     (getinfo       :no-auth  (tag)       "summary")
-     (gettoptracks  :no-auth  (tag limit) "artist > name, track > name")
-     (gettopartists :no-auth  (tag limit) "artist name"))
+     (getinfo       :no (tag)       "summary")
+     (gettoptracks  :no (tag limit) "artist > name, track > name")
+     (gettopartists :no (tag limit) "artist name"))
     
     (track
-     (love     :auth (artist track)           "lfm")
-     (unlove   :auth (artist track)           "lfm")
-     (scrobble :auth (artist track timestamp) "lfm"))
+     (love     :yes (artist track)           "lfm")
+     (unlove   :yes (artist track)           "lfm")
+     (scrobble :yes (artist track timestamp) "lfm"))
     
     (user
      (getlovedtracks :no-auth  (user limit)    "artist > name, track > name" )))
@@ -138,7 +138,7 @@ request."
 
 (defun lastfm--auth-p (method)
   "Does this method require authentication?"
-  (eql (cl-second method) :auth))
+  (eql (cl-second method) :yes))
 
 (defun lastfm--sk-p (method)
   "Is this a method used for requesting the session key?"
