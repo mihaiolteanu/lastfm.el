@@ -72,33 +72,34 @@ to access your Last.fm account? ")
       (lastfm--set-config-parameters)   ;set params on config file update.
       )))
 
-;;;; 
+
+;;;; Methods list, and functions for it's manipulation
 (defconst lastfm--methods-pretty
   '((album
-     (getinfo       :no-auth  (artist album)  "track > name"                ))
+     (getinfo :no-auth (artist album) "track > name"))
     
     (artist
-     (getinfo       :no-auth  (artist)        "bio summary"                 )
-     (getsimilar    :no-auth  (artist limit)  "artist name"                 )
-     (gettoptags    :no-auth  (artist)        "tag name"                    )
-     (gettopalbums  :no-auth  (artist limit)  "album > name"                )
-     (gettoptracks  :no-auth  (artist limit)  "track > name"                )
-     (search        :no-auth  (artist limit)  "artist name"                 ))
+     (getinfo      :no-auth (artist)       "bio summary")
+     (getsimilar   :no-auth (artist limit) "artist name")
+     (gettoptags   :no-auth (artist)       "tag name")
+     (gettopalbums :no-auth (artist limit) "album > name")
+     (gettoptracks :no-auth (artist limit) "track > name")
+     (search       :no-auth (artist limit) "artist name"))
     
     ;; Auth (only need to be called once, to get the session key (sk))
     (auth
-     (gettoken      :sk       ()              "token"                       )
-     (getsession    :sk       (token)         "session key"                 ))
+     (gettoken   :sk ()      "token")
+     (getsession :sk (token) "session key"))
     
     (tag
-     (getinfo       :no-auth  (tag)           "summary"                     )
-     (gettoptracks  :no-auth  (tag limit)     "artist > name, track > name" )
-     (gettopartists :no-auth  (tag limit)     "artist name"                 ))
+     (getinfo       :no-auth  (tag)       "summary")
+     (gettoptracks  :no-auth  (tag limit) "artist > name, track > name")
+     (gettopartists :no-auth  (tag limit) "artist name"))
     
     (track
-     (love          :auth     (artist track)  "lfm"                         )
-     (unlove        :auth     (artist track)  "lfm"                         )
-     (scrobble      :auth     (artist track timestamp)  "lfm"               ))
+     (love     :auth (artist track)           "lfm")
+     (unlove   :auth (artist track)           "lfm")
+     (scrobble :auth (artist track timestamp) "lfm"))
     
     (user
      (getlovedtracks :no-auth  (user limit)    "artist > name, track > name" )))
