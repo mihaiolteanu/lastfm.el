@@ -196,19 +196,25 @@ equal or ampersand symbols between them."
 (cl-defun lastfm--request (method &rest values)
   (let ((resp ""))
     (request lastfm--url
-             :params  (lastfm--build-params method values)
-             :parser  'buffer-string
-             :type    "POST"
-             :sync    t
-             :success (cl-function
-                       (lambda (&key data &allow-other-keys)
-                         (setq resp data))))
+             :params   (lastfm--build-params method values)
+             :parser   'buffer-string
+             :type     "POST"
+             :sync     t
+             :complete (cl-function
+                        (lambda (&key data &allow-other-keys)
+                          (setq resp data))))
     resp))
 
 (defun lastfm--parse-response (response method)
-  (mapcar #'elquery-text
-          (elquery-$ (lastfm--query-str method)
-                     (elquery-read-string response))))
+  (let* ((resp-obj (elquery-read-string response))
+         ;; Only one error expected, if any.
+         (error-str (elquery-text
+                     (cl-first (elquery-$ "error" resp-obj)))))
+    (if error-str
+        (error error-str)
+      (mapcar #'elquery-text
+              (elquery-$ (lastfm--query-str method)
+                         resp-obj)))))
 
 (defun lastfm--build-function (method)
   (let* ((name-str (symbol-name (lastfm--method-name method)))
