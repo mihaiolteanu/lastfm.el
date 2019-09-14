@@ -5,37 +5,98 @@
 (require 'elquery)
 (require 's)
 
-(defconst lastfm--url         "http://ws.audioscrobbler.com/2.0/")
-(defconst lastfm--config-file (concat (xdg-config-home) "/.lastfmrc"))
-(defvar   lastfm--api-key)
-(defvar   lastfm--shared-secret)
-(defvar   lastfm--username)
-(defvar   lastfm--sk)
+;;;; Configuration and setup
+(defconst lastfm--url "http://ws.audioscrobbler.com/2.0/"
+  "The URL for the last.fm API version 2 used to make all the
+  method calls.")
 
-(defconst lastfm--methods  
-  '(;; Album
-    (album-getinfo       :no-auth  (artist album)  "track > name"                )
-    ;; Artist
-    (artist-getinfo      :no-auth  (artist)        "bio summary"                 )
-    (artist-getsimilar   :no-auth  (artist limit)  "artist name"                 )
-    (artist-gettoptags   :no-auth  (artist)        "tag name"                    )
-    (artist-gettopalbums :no-auth  (artist limit)  "album > name"                )
-    (artist-gettoptracks :no-auth  (artist limit)  "track > name"                )
-    (artist-search       :no-auth  (artist limit)  "artist name"                 )
+(defconst lastfm--config-file
+  (let ((f (concat (xdg-config-home) "/.lastfmrc")))
+    (or (file-exists-p f)
+        (with-temp-file f
+          (insert "(CONFIG
+  :API-KEY \"\"
+  :SHARED-SECRET \"\"
+  :USERNAME \"\")")))
+    f)
+  "User config file holding the last.fm api-key, shared-secret,
+username and the session key. If the file does not exist when the
+package is loaded, build it with empty values.")
+
+;; The values of these configs are taken from the user config file.
+(defvar lastfm--api-key)
+(defvar lastfm--shared-secret)
+(defvar lastfm--username)
+(defvar lastfm--sk)
+
+(let ((config (with-temp-buffer
+                (insert-file-contents lastfm--config-file)
+                ;; Skip the 'config' symbol. Only used by the cl implementation
+                (cl-rest (read (buffer-string))))))
+  (cl-mapcar (lambda (key value)
+               (setf (pcase key
+                       (:API-KEY       lastfm--api-key)
+                       (:SHARED-SECRET lastfm--shared-secret)
+                       (:USERNAME      lastfm--username)
+                       (:SK            lastfm--sk))
+                     value))
+             (cl-remove-if #'stringp config)
+             (cl-remove-if #'symbolp config)))
+
+;;;; 
+(defconst lastfm--methods-pretty
+  '((album
+     (getinfo       :no-auth  (artist album)  "track > name"                ))
+    
+    (artist
+     (getinfo       :no-auth  (artist)        "bio summary"                 )
+     (getsimilar    :no-auth  (artist limit)  "artist name"                 )
+     (gettoptags    :no-auth  (artist)        "tag name"                    )
+     (gettopalbums  :no-auth  (artist limit)  "album > name"                )
+     (gettoptracks  :no-auth  (artist limit)  "track > name"                )
+     (search        :no-auth  (artist limit)  "artist name"                 ))
+    
     ;; Auth (only need to be called once, to get the session key (sk))
-    (auth-gettoken       :sk       ()              "token"                       )
-    (auth-getsession     :sk       (token)         "session key"                 )
-    ;; Tag
-    (tag-getinfo         :no-auth  (tag)           "summary"                     )
-    (tag-gettoptracks    :no-auth  (tag limit)     "artist > name, track > name" )
-    (tag-gettopartists   :no-auth  (tag limit)     "artist name"                 )
-    ;; Track
-    (track-love          :auth     (artist track)  "lfm"                         )
-    (track-unlove        :auth     (artist track)  "lfm"                         )
-    (track-scrobble      :auth     (artist track timestamp)  "lfm"               )
-    ;; User
-    (user-getlovedtracks :no-auth  (user limit)    "artist > name, track > name" ))
-  "List of all the supported lastfm methods from which the API is generated")
+    (auth
+     (gettoken      :sk       ()              "token"                       )
+     (getsession    :sk       (token)         "session key"                 ))
+    
+    (tag
+     (getinfo       :no-auth  (tag)           "summary"                     )
+     (gettoptracks  :no-auth  (tag limit)     "artist > name, track > name" )
+     (gettopartists :no-auth  (tag limit)     "artist name"                 ))
+    
+    (track
+     (love          :auth     (artist track)  "lfm"                         )
+     (unlove        :auth     (artist track)  "lfm"                         )
+     (scrobble      :auth     (artist track timestamp)  "lfm"               ))
+    
+    (user
+     (getlovedtracks :no-auth  (user limit)    "artist > name, track > name" )))
+  "List of all the supported lastfm methods. A one liner
+like (artist-getinfo ...) or (track-love ...) is more easier to
+parse, but this is easier for the eyes. The latter, the
+one-liner, is generated from this list and is the one actually
+used for all the processing and generation of the user API. ")
+
+(defconst lastfm--methods
+  (let ((res nil))
+    (mapcar
+     (lambda (group)
+       (mapcar
+        (lambda (method)
+          (push (cons (make-symbol
+                       (concat (symbol-name (cl-first group)) "-"
+                               (symbol-name (cl-first method))))
+                      (cl-rest method))
+                res))
+        (cl-rest group)))
+     lastfm--methods-pretty)
+    (reverse res))
+  "Generated list of one-liner lastfm methods from the pretty
+list of methods. Each entry in this list is a complete lastm
+method specification. It can be, and it is, used to generate the
+API for this library.")
 
 (defun lastfm--method-name (method)
   (cl-first method))
@@ -65,29 +126,6 @@ lastfm response."
 (defun lastfm--multi-query-p (query)
   "CSS selectors with ',' allow retrieving multiple tags in the same request"
   (s-contains "," query))
-
-(defun lastfm--read-config-file ()
-  "Return the useful bits of the config file."
-  (with-temp-buffer
-    (insert-file-contents lastfm--config-file)
-    ;; car is the function name used in cl, but we can't use that here since no
-    ;; namespaces are available; skipping it.
-    (cl-rest (read (buffer-string)))))
-
-(defun lastfm--set-user-config ()
-  "Set the api-key, shared-secret, etc from the config file"
-  (let ((config (lastfm--read-config-file)))
-    (cl-mapcar (lambda (key value)
-                 (setf (pcase key
-                         (:API-KEY lastfm--api-key)
-                         (:SHARED-SECRET lastfm--shared-secret)
-                         (:USERNAME lastfm--username)
-                         (:SK lastfm--sk))
-                       value))
-               (cl-remove-if #'stringp config)
-               (cl-remove-if #'symbolp config))))
-
-(lastfm--set-user-config)
 
 (defun lastfm--group-params-for-signing (params)
   "The signing procedure for authentication needs all the
