@@ -29,19 +29,48 @@ package is loaded, build it with empty values.")
 (defvar lastfm--username)
 (defvar lastfm--sk)
 
-(let ((config (with-temp-buffer
-                (insert-file-contents lastfm--config-file)
-                ;; Skip the 'config' symbol. Only used by the cl implementation
-                (cl-rest (read (buffer-string))))))
-  (cl-mapcar (lambda (key value)
-               (setf (pcase key
-                       (:API-KEY       lastfm--api-key)
-                       (:SHARED-SECRET lastfm--shared-secret)
-                       (:USERNAME      lastfm--username)
-                       (:SK            lastfm--sk))
-                     value))
-             (cl-remove-if #'stringp config)
-             (cl-remove-if #'symbolp config)))
+(defun lastfm--read-config-file ()
+  "Return the config file contents as a Lisp object"
+  (with-temp-buffer
+    (insert-file-contents lastfm--config-file)
+    (read (buffer-string))))
+
+(defun lastfm--set-config-parameters ()
+  "Read the config file and set the config parameters used
+throught the package."
+  (let ((config (cl-rest (lastfm--read-config-file))))
+    (cl-mapcar (lambda (key value)
+                 (setf (pcase key
+                         (:API-KEY       lastfm--api-key)
+                         (:SHARED-SECRET lastfm--shared-secret)
+                         (:USERNAME      lastfm--username)
+                         (:SK            lastfm--sk))
+                       value))
+               (cl-remove-if #'stringp config)
+               (cl-remove-if #'symbolp config))))
+
+(lastfm--set-config-parameters)         ;set params on start-up.
+
+(defun lastfm-generate-session-key ()
+  "Get an authorization token from last.fm and then ask the user
+to grant persmission to his last.fm account. If granted, then ask
+for the session key (sk) and append the sk value to the config's
+file list of values."
+  (let ((token (cl-first (lastfm-auth-gettoken))))
+    ;; Ask the user to allow access.
+    (browse-url (concat "http://www.last.fm/api/auth/?api_key="
+                        lastfm--api-key
+                        "&token=" token))
+    (when (yes-or-no-p "Did you grant the application persmission 
+to access your Last.fm account? ")
+      ;; If permission granted, get the sk and update the config file.
+      (let* ((sk (cl-first (lastfm-auth-getsession token)))
+             (config (lastfm--read-config-file))
+             (config-with-sk (append config (list :SK sk))))
+        (with-temp-file lastfm--config-file
+          (insert (prin1-to-string config-with-sk))))
+      (lastfm--set-config-parameters)   ;set params on config file update.
+      )))
 
 ;;;; 
 (defconst lastfm--methods-pretty
