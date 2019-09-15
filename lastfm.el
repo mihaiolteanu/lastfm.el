@@ -227,9 +227,13 @@ equal or ampersand symbols between them."
                      (cl-first (elquery-$ "error" resp-obj)))))
     (if error-str
         (error error-str)
-      (mapcar #'elquery-text
-              (elquery-$ (lastfm--query-str method)
-                         resp-obj)))))
+      (let ((parsed-response
+             (mapcar #'elquery-text
+                     (elquery-$ (lastfm--query-str method)
+                                resp-obj))))
+        ;; elquery returns the last matched tag as the first element in the
+        ;; response list. For toptracks, toptags, etc, this would be backwards.
+        (reverse parsed-response)))))
 
 (defun lastfm--build-function (method)
   (let* ((name-str (symbol-name (lastfm--method-name method)))
