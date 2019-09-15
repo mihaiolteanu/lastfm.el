@@ -76,33 +76,40 @@ to access your Last.fm account? ")
 ;;;; Methods list, and functions for it's manipulation
 (defconst lastfm--methods-pretty
   '((album
-     (getinfo :no (artist album) "track > name"))
+     (addtags :yes (artist album tags) () "lfm")
+     (getinfo :no  (artist album) ()      "track > name")
+     (gettags :yes (artist album) ()     "tag name")
+     (gettoptags :no (artist album) ()      "tag name")
+     (removetag :yes (artist album tag) () "lfm")
+     (search :no (album) () "??"))
     
     (artist
-     (getinfo      :no (artist)       "bio summary")
-     (getsimilar   :no (artist limit) "artist name")
-     (gettoptags   :no (artist)       "tag name")
-     (gettopalbums :no (artist limit) "album > name")
-     (gettoptracks :no (artist limit) "track > name")
-     (search       :no (artist limit) "artist name"))
+     (getinfo      :no (artist) ()      "bio summary")
+     (getsimilar   :no (artist) ((limit lastfm--similar-limit)
+                                 (user lastfm--username))
+                   "artist name")
+     (gettoptags   :no (artist) ()    "tag name")
+     (gettopalbums :no (artist limit) () "album > name")
+     (gettoptracks :no (artist) ((limit 10)) "track > name")
+     (search       :no (artist) ((limit 10)) "artist name"))
     
     ;; Auth (only need to be called once, to get the session key (sk))
     (auth
-     (gettoken   :sk ()      "token")
-     (getsession :sk (token) "session key"))
+     (gettoken   :sk () ()     "token")
+     (getsession :sk (token) () "session key"))
     
     (tag
-     (getinfo       :no (tag)       "summary")
-     (gettoptracks  :no (tag limit) "artist > name, track > name")
-     (gettopartists :no (tag limit) "artist name"))
+     (getinfo       :no (tag) ()      "summary")
+     (gettoptracks  :no (tag) ((limit 10)) "artist > name, track > name")
+     (gettopartists :no (tag) ((limit 10)) "artist name"))
     
     (track
-     (love     :yes (artist track)           "lfm")
-     (unlove   :yes (artist track)           "lfm")
-     (scrobble :yes (artist track timestamp) "lfm"))
+     (love     :yes (artist track) ()        "lfm")
+     (unlove   :yes (artist track) ()        "lfm")
+     (scrobble :yes (artist track timestamp) () "lfm"))
     
     (user
-     (getlovedtracks :no-auth  (user limit)    "artist > name, track > name" )))
+     (getlovedtracks :no-auth  (user) ((limit 50))    "artist > name, track > name" )))
   "List of all the supported lastfm methods. A one liner
 like (artist-getinfo ...) or (track-love ...) is more easier to
 parse, but this is easier for the eyes. The latter, the
@@ -145,13 +152,21 @@ request."
   (eql (cl-second method) :sk))
 
 (defun lastfm--method-params (method)
-  "Parameters requested for succesfully calling this method."
+  "Minimum required parameters for succesfully calling this method."
   (cl-third method))
+
+(defun lastfm--method-keyword-params (method)
+  (cl-fourth method))
+
+(defun lastfm--all-method-params (method)
+  "A list of all the method parameters, required plus keyword."
+  (append (lastfm--method-params method)
+          (mapcar #'car (lastfm--method-keyword-params method))))
 
 (defun lastfm--query-str (method)
   "XML query string for extracting the relevant data from the
 lastfm response."
-  (cl-fourth method))
+  (cl-fifth method))
 
 (defun lastfm--multi-query-p (query)
   "CSS selectors with ',' allow retrieving multiple tags in the same request"
@@ -176,7 +191,7 @@ equal or ampersand symbols between them."
            ;;Pair the user supplied values with the  method parameters.
            ,@(cl-mapcar (lambda (param value)
                           (cons (symbol-name param) value))
-                        (lastfm--method-params method)
+                        (lastfm--all-method-params method)
                         values))))
     ;; Session Key(SK) parameter is needed for all auth services, but not for
     ;; the services used to obtain the SK.
@@ -219,11 +234,16 @@ equal or ampersand symbols between them."
 (defun lastfm--build-function (method)
   (let* ((name-str (symbol-name (lastfm--method-name method)))
          (fn-name (intern (concat "lastfm-" name-str)))
-         (params (lastfm--method-params method)))
-    `(defun ,fn-name ,params
+         (params (lastfm--method-params method))
+         (key-params (lastfm--method-keyword-params method)))
+    `(cl-defun ,fn-name ,(if key-params
+                             `(,@params &key ,@key-params)
+                           `,@params)
        (lastfm--parse-response
         (lastfm--request ',method
-                         ,@params)
+                         ,@(if key-params
+                               `(,@params ,@(mapcar #'car key-params))
+                             `,params))
         ',method))))
 
 (defmacro lastfm--build-api ()
