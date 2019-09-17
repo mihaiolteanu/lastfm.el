@@ -168,9 +168,10 @@ request."
 lastfm response."
   (cl-fifth method))
 
-(defun lastfm--multi-query-p (query)
-  "CSS selectors with ',' allow retrieving multiple tags in the same request"
-  (s-contains "," query))
+(defun lastfm--multi-query-p (method)
+  "Does the method require extracting multiple elements from the
+  same response?"
+  (s-contains-p "," (lastfm--query-str method)))
 
 (defun lastfm--group-params-for-signing (params)
   "The signing procedure for authentication needs all the
@@ -221,19 +222,30 @@ equal or ampersand symbols between them."
     resp))
 
 (defun lastfm--parse-response (response method)
+  "Extract the relevant information from the response, according
+to the query string defined in the method."
   (let* ((resp-obj (elquery-read-string response))
          ;; Only one error expected, if any.
          (error-str (elquery-text
                      (cl-first (elquery-$ "error" resp-obj)))))
     (if error-str
         (error error-str)
-      (let ((parsed-response
+      (let ((result
              (mapcar #'elquery-text
                      (elquery-$ (lastfm--query-str method)
                                 resp-obj))))
+        ;; In a request like artist-gettoptracks, the name of the artists will
+        ;; fill the first half of the response list, while the song names the
+        ;; remaining half. Split the response in half and group the artist with
+        ;; the song name.
+        (when (lastfm--multi-query-p method)
+          (let ((nentries (/ (length result) 2)))
+            (setq result
+                  (-zip (-take nentries result)
+                        (-drop nentries result)))))
         ;; elquery returns the last matched tag as the first element in the
         ;; response list. For toptracks, toptags, etc, this would be backwards.
-        (reverse parsed-response)))))
+        (reverse result)))))
 
 (defun lastfm--build-function (method)
   (let* ((name-str (symbol-name (lastfm--method-name method)))
