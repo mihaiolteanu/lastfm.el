@@ -132,8 +132,8 @@ used for all the processing and generation of the user API. ")
     (reverse res))
   "Generated list of one-liner lastfm methods from the pretty
 list of methods. Each entry in this list is a complete lastm
-method specification. It can be, and it is, used to generate the
-API for this library.")
+method specification. It is used to generate the API for this
+library.")
 
 (defun lastfm--method-name (method)
   (cl-first method))
