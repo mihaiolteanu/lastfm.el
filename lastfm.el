@@ -189,11 +189,14 @@ equal or ampersand symbols between them."
          `(;; The api key and method is needed for all calls.
            ("api_key" . ,lastfm--api-key)
            ("method" . ,(lastfm--method-str method))
-           ;;Pair the user supplied values with the  method parameters.
-           ,@(cl-mapcar (lambda (param value)
-                          (cons (symbol-name param) value))
-                        (lastfm--all-method-params method)
-                        values))))
+           ;; Pair the user supplied values with the method parameters.  If no
+           ;; value supplied for a given param, do not include it in the request.
+           ,@(cl-remove-if #'null
+              (cl-mapcar (lambda (param value)
+                           (when value
+                             (cons (symbol-name param) value)))
+                         (lastfm--all-method-params method)
+                         values)))))
     ;; Session Key(SK) parameter is needed for all auth services, but not for
     ;; the services used to obtain the SK.
     (when (lastfm--auth-p method)
