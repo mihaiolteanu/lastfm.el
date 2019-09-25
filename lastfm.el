@@ -93,7 +93,8 @@ to access your Last.fm account? ")
      (gettags       :yes (artist)     ()                    "tag name")
      (gettopalbums  :no  (artist)     ((limit 50))          "album > name")
      (gettoptags    :no  (artist)     ()                    "tag name")
-     (gettoptracks  :no  (artist)     ((limit 50) (page 1)) "track > name")
+     (gettoptracks  :no  (artist)     ((limit 50) (page 1))
+                    ("artist > name" "track > name" "track > playcount"))
      (removetag     :yes (artist tag) ()                    "lfm")
      (search        :no  (artist)     ((limit 30))          "artist name"))
     
@@ -104,11 +105,12 @@ to access your Last.fm account? ")
     (chart
      (gettopartists :no () ((limit 50)) "name")
      (gettoptags    :no () ((limit 50)) "name")
-     (gettoptracks  :no () ((limit 50)) "artist > name, track > name"))
+     (gettoptracks  :no () ((limit 50)) "artist > name, track > name, track > listeners"))
 
     (geo
      (gettopartists :no (country) ((limit 50) (page 1)) "artist name")
-     (gettoptracks  :no (country) ((limit 50) (page 1)) "track > name, artist > name"))
+     (gettoptracks  :no (country) ((limit 50) (page 1))
+                    ("artist > name" "track > name")))
 
     (library
      (getartists :no () ((user lastfm--username) (limit 50) (page 1)) "artist name"))
@@ -218,15 +220,10 @@ request."
   (append (lastfm--method-params method)
           (mapcar #'car (lastfm--method-keyword-params method))))
 
-(defun lastfm--query-str (method)
+(defun lastfm--query-strings (method)
   "XML query string for extracting the relevant data from the
 lastfm response."
   (cl-fifth method))
-
-(defun lastfm--multi-query-p (method)
-  "Does the method require extracting multiple elements from the
-  same response?"
-  (s-contains-p "," (lastfm--query-str method)))
 
 (defun lastfm--group-params-for-signing (params)
   "The signing procedure for authentication needs all the
@@ -279,31 +276,47 @@ equal or ampersand symbols between them."
                           (setq resp data))))
     resp))
 
+(defun lastfm--key-from-query-str (query-string)
+  "Use the query string to build a key usable in alists."
+  (declare (string method-name))
+  (make-symbol
+   (s-replace " " ""
+              (s-replace ">" "-" query-string))))
+
 (defun lastfm--parse-response (response method)
-  "Extract the relevant information from the response, according
-to the query string defined in the method."
-  (let* ((resp-obj (elquery-read-string response))
+  (let* ((raw-response (elquery-read-string response))
          ;; Only one error expected, if any.
          (error-str (elquery-text
-                     (cl-first (elquery-$ "error" resp-obj)))))
+                     (cl-first (elquery-$ "error" raw-response)))))
     (if error-str
         (error error-str)
-      (let ((result
-             (mapcar #'elquery-text
-                     (elquery-$ (lastfm--query-str method)
-                                resp-obj))))
-        ;; In a request like artist-gettoptracks, the name of the artists will
-        ;; fill the first half of the response list, while the song names the
-        ;; remaining half. Split the response in half and group the artist with
-        ;; the song name.
-        (when (lastfm--multi-query-p method)
-          (let ((nentries (/ (length result) 2)))
-            (setq result
-                  (-zip (-take nentries result)
-                        (-drop nentries result)))))
-        ;; elquery returns the last matched tag as the first element in the
-        ;; response list. For toptracks, toptags, etc, this would be backwards.
-        (reverse result)))))
+      (let ((query-strings (lastfm--query-strings method)))
+        (cl-labels
+            ((helper (queries)
+                     (if (null queries)
+                         '()
+                       ;; Use the same raw response to extract a different text
+                       ;; object each time, according to the current query
+                       ;; string. Build an alist from the query string and the
+                       ;; extracted text object.
+                       (cons (--map (cons (lastfm--key-from-query-str (car queries))
+                                          (elquery-text it))
+                                    (elquery-$ (car queries) raw-response))
+                             (helper (cdr queries))))))
+          (let ((result (helper query-strings)))            
+            (reverse
+             ;; The cons from the helper method above groups all the text
+             ;; objects from the first query string together, followed by all
+             ;; the text objects from the next query string grouped together and
+             ;; so on until all the query strings are exhausted. If the query
+             ;; string would look like '("artist" "song") then we would have
+             ;; '((artist1 artist2) (song1 song2)) as a result from the helper
+             ;; method, but we want '((artist1 songs1) (artist2 song2)) instead.
+             (if (= (length query-strings) 2)
+                 ;; Workaround for -zip returning a cons cell instead of a list
+                 ;; when two lists are provided to it.
+                 (-zip-with #'list (cl-first result) (cl-second result))
+               (apply #'-zip (helper query-strings))))))))))
 
 (defun lastfm--build-function (method)
   (let* ((name-str (symbol-name (lastfm--method-name method)))
