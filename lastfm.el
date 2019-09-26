@@ -335,9 +335,8 @@ equal or ampersand symbols between them."
 
 (defmacro lastfm--build-api ()
   `(progn
-     ,@(mapcar (lambda (method)
-                 (lastfm--build-function method))
-               lastfm--methods)))
+     ,@(--map (lastfm--build-function it)
+              lastfm--methods)))
 
 (lastfm--build-api)
 
