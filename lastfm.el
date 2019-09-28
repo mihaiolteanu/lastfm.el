@@ -1,4 +1,31 @@
-;; -*- lexical-binding: t -*-
+;;; lastfm.el --- Last.fm API for Emacs Lisp -*- lexical-binding: t -*-
+
+;; Copyright (C) 2019 Free Software Foundation, Inc.
+
+;; Author: Mihai Olteanu <mihai_olteanu@fastmail.fm>
+;; Version: 1.0
+;; Package-Requires: (request "0.3.0") (cl-lib "1.0") ((memoize "1.1") (elquery 0.1.0) (s "1.12.0"))
+;; Keywords: music
+;; URL: https://github.com/mihaiolteanu/lastfm.el/
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; Complete Last.fm API implementation.
+
+;;; Code:
 
 (require 'request)
 (require 'cl-lib)
@@ -70,11 +97,9 @@ to access your Last.fm account? ")
              (config-with-sk (append config (list :SK sk))))
         (with-temp-file lastfm--config-file
           (insert (prin1-to-string config-with-sk))))
-      (lastfm--set-config-parameters)   ;set params on config file update.
-      )))
+      ;; Reload the file after the sk update.
+      (lastfm--set-config-parameters))))
 
-
-;;;; Methods list, and functions for it's manipulation
 (defconst lastfm--methods-pretty
   '((album
      (addTags
@@ -539,3 +564,5 @@ equal or ampersand symbols between them."
 (lastfm--build-api)
 
 (provide 'lastfm)
+
+;;; lastfm.el ends here
