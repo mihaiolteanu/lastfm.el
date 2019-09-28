@@ -503,33 +503,31 @@ equal or ampersand symbols between them."
   (let* ((name-str (symbol-name (lastfm--method-name method)))
          (fn-name (intern (concat "lastfm-" name-str)))
          (params (lastfm--method-params method))
-         (key-params (lastfm--method-keyword-params method))
-         (fn `(cl-defun ,fn-name ,(if key-params ;Name and parameters
-                                      `(,@params &key ,@key-params)
-                                    `,@params)
-                ;; Documentation string.
-                ,(concat (lastfm--doc-string method)
-                         "\n \n"
-                         "See the official Last.fm page for full documentation at"
-                         "\nURL `"
-                         (lastfm--method-url method)
-                         "'")
-                ;; Body.
-                (lastfm--parse-response
-                 (lastfm--request ',method
-                                  ,@(if key-params
-                                        `(,@params ,@(mapcar #'car key-params))
-                                      `,params))
-                 ',method))))
-    ;; Memoize if needed and not already memoized (when reloading the library,
-    ;; for example), return the function definition as is, otherwise.
-    (if (lastfm--memoizable-p method)
-        `(condition-case nil
-             (memoize ,fn)
-           ;; Memoizing a function a second time returns an error. Do nothing in
-           ;; that case.
-           (error nil))
-      fn)))
+         (key-params (lastfm--method-keyword-params method)))
+    `(progn
+       (cl-defun ,fn-name ,(if key-params ;Name and parameters
+                               `(,@params &key ,@key-params)
+                             `,@params)
+         ;; Documentation string.
+         ,(concat (lastfm--doc-string method)
+                  "\n \n"
+                  "See the official Last.fm page for full documentation at"
+                  "\nURL `"
+                  (lastfm--method-url method)
+                  "'")
+         ;; Body.
+         (lastfm--parse-response
+          (lastfm--request ',method
+                           ,@(if key-params
+                                 `(,@params ,@(mapcar #'car key-params))
+                               `,params))
+          ',method))
+       ,(if (lastfm--memoizable-p method)
+            `(condition-case nil
+                 (memoize #',fn-name)
+               ;; Memoizing a function a second time returns an error. Do
+               ;; nothing in that case.
+               (user-error nil))))))
 
 (defmacro lastfm--build-api ()
   `(progn
