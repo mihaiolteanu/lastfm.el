@@ -450,8 +450,12 @@ equal or ampersand symbols between them."
   "Use the query string to build a key usable in alists."
   (declare (string method-name))
   (make-symbol
-   (s-replace " " ""
-              (s-replace ">" "-" query-string))))
+   (s-replace " " ""                    ;remove all extra spaces
+              ;; Some queries contain '>' others only ' '. Replace both of them
+              ;; with '-'.
+              (if (s-contains-p ">" query-string)
+                  (s-replace ">" "-" query-string)
+                (s-replace " " "-" query-string)))))
 
 (defun lastfm--parse-response (response method)
   (let* ((raw-response (elquery-read-string response))
