@@ -526,7 +526,9 @@ equal or ampersand symbols between them."
     (if (lastfm--memoizable-p method)
         `(condition-case nil
              (memoize ,fn)
-           ,fn)
+           ;; Memoizing a function a second time returns an error. Do nothing in
+           ;; that case.
+           (error nil))
       fn)))
 
 (defmacro lastfm--build-api ()
