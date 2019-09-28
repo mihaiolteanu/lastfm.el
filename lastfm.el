@@ -83,15 +83,15 @@ to access your Last.fm account? ")
      
      (getInfo
       "Get the metadata and tracklist for an album on Last.fm using the album name."
-      :no  (artist album) () ("track > name"))
+      :no (artist album) () ("track > name"))
      
      (getTags
       "Get the tags applied by an individual user to an album on Last.fm."
-      :yes (artist album) () ("tag name"))
+      :yes (artist album) () ("tag name" "tag count"))
      
      (getTopTags
       "Get the top tags for an album on Last.fm, ordered by popularity."
-      :no (artist album) () ("tag name"))
+      :no (artist album) () ("tag name" "tag count"))
      
      (removeTag
       "Remove a user's tag from an album."
@@ -99,7 +99,7 @@ to access your Last.fm account? ")
      
      (search
       "Search for an album by name. Returns album matches sorted by relevance."
-      :no (album) ((limit 10)) ("album artist")))
+      :no (album) ((limit 10)) ("album artist" "album name")))
     
 
     (artist
@@ -113,7 +113,7 @@ to access your Last.fm account? ")
      
      (getInfo
       "Get the metadata for an artist. Includes biography, max 300 characters."
-      :no (artist) () ("bio summary"))
+      :no (artist) () ("bio summary" "listeners" "playcount"))
      
      (getSimilar
       "Get all the artists similar to this artist."
@@ -136,10 +136,10 @@ to access your Last.fm account? ")
      (getTopTracks
       "Get the top tracks by an artist, ordered by popularity."
       :no (artist) ((limit 50) (page 1))
-      ("artist > name" "track > name" "track > playcount"))
+      ("artist > name" "track > name" "playcount" "listeners"))
      
      (removeTag
-      "emove a user's tag from an artist."
+      "Remove a user's tag from an artist."
       :yes (artist tag) () ("lfm"))
      
      (search
@@ -160,37 +160,38 @@ to access your Last.fm account? ")
     (chart
      (getTopArtists
       "Get the top artists chart."
-      :no () ((limit 50)) ("name"))
+      :no () ((limit 50)) ("artist name" "playcount" "listeners"))
      
      (getTopTags
       "Get the top tags chart."
-      :no () ((limit 50)) ("name"))
+      :no () ((limit 50)) ("tag-name"))
      
      (getTopTracks
       "Get the top tracks chart."
-      :no () ((limit 50)) ("artist > name" "track > name" "track > listeners")))
+      :no () ((limit 50)) ("artist > name" "track > name" "playcount" "listeners")))
 
 
     (geo
      (getTopArtists
       "Get the most popular artists on Last.fm by country."
-      :no (country) ((limit 50) (page 1)) ("artist name"))
+      :no (country) ((limit 50) (page 1)) ("artist name" "playcount"))
      
      (getTopTracks
       "Get the most popular tracks on Last.fm last week by country."
-      :no (country) ((limit 50) (page 1)) ("artist > name" "track > name")))
+      :no (country) ((limit 50) (page 1)) ("artist > name" "track > name" "playcount")))
 
 
     (library 
      (getArtists
       "A list of all the artists in a user's library."
-      :no () ((user lastfm--username) (limit 50) (page 1)) ("artist name")))
+      :no () ((user lastfm--username) (limit 50) (page 1))
+      ("artist name" "playcount" "tagcount")))
 
 
     (tag
      (getInfo
       "Get the metadata for a tag"
-      :no (tag) () ("summary"))
+      :no (tag) () ("tag summary"))
      
      (getSimilar
       "Search for tags similar to this one, based on listening data."
@@ -206,7 +207,7 @@ to access your Last.fm account? ")
      
      (getTopTags
       "Fetches the top global tags on Last.fm, sorted by number of times used."
-      :no () () ("name"))
+      :no () () ("tag name"))
      
      (getTopTracks
       "Get the top tracks tagged by this tag, ordered by tag count."
@@ -224,7 +225,7 @@ to access your Last.fm account? ")
      
      (getInfo
       "Get the track metadata."
-      :no (artist track) () ("album title"))
+      :no (artist track) () ("album title" "tag name" "playcount" "listeners"))
      
      (getSimilar
       "Get similar tracks to this one, based on listening data."
@@ -269,7 +270,8 @@ to access your Last.fm account? ")
     (user
      (getfriends
       "Get a list of the user's friends on Last.fm."
-      :no (user) ((recenttracks nil) (limit 50) (page 1)) ("name"))
+      :no (user) ((recenttracks nil) (limit 50) (page 1))
+      ("name" "realname" "country" "age" "gender" "subscriber" "playcount"))
      
      (getInfo
       "Get information about a user profile."
@@ -284,25 +286,25 @@ to access your Last.fm account? ")
      (getPersonalTags
       "Get the user's personal tags"
       :no (tag taggingtype)
-      ((user lastfm--username) (limit 50) (page 1)) ("name"))
+      ((user lastfm--username) (limit 50) (page 1)) ("artist name"))
      
      (getRecentTracks
       "Get a list of the recent tracks listened to by this user."
       :no () ((user lastfm--username) (limit nil) (page nil)
               (from nil) (to nil) (extended 0))
-      ("track > artist" "track > name"))
+      ("track > artist" "track > name" "date"))
      
      (getTopAlbums
       "Get the top albums listened to by a user"
       :no () ((user lastfm--username) (period nil)
               (limit nil) (page nil))
-      ("artist > name" "album > name"))
+      ("artist > name" "album > name" "playcount"))
      
      (getTopArtists
       "Get the top artists listened to by a user."
       :no () ((user lastfm--username) (period nil)
               (limit nil) (page nil))
-      ("artist name"))
+      ("artist name" "playcount"))
      
      (getTopTags
       "Get the top tags used by this user."
@@ -312,22 +314,22 @@ to access your Last.fm account? ")
       "Get the top tracks listened to by a user. "
       :no () ((user lastfm--username) (period nil)
               (limit nil) (page nil))
-      ("artist > name" "track > name"))
+      ("artist > name" "track > name" "playcount"))
      
      (getWeeklyAlbumChart
       "Get an album chart for a user profile, for a given date range."
       :no () ((user lastfm--username) (from nil) (to nil))
-      ("album > artist" "album > name"))
+      ("album > artist" "album > name" "playcount"))
      
      (getWeeklyArtistChart
       "Get an artist chart for a user profile, for a given date range."
       :no () ((user lastfm--username) (from nil) (to nil))
-      ("album > name" "artist > playcount"))
+      ("artist > name" "playcount"))
      
      (getWeeklyTrackChart
       "Get a track chart for a user profile, for a given date range."
       :no () ((user lastfm--username) (from nil) (to nil))
-      ("track > artist" "track > name"))))
+      ("track > artist" "track > name" "playcount"))))
   "List of all the supported lastfm methods. A one liner
 like (artist-getinfo ...) or (track-love ...) is more easier to
 parse, but this is easier for the eyes. The latter, the
