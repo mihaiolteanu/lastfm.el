@@ -2,6 +2,7 @@
 
 (require 'request)
 (require 'cl-lib)
+(require 'memoize)
 (require 'elquery)
 (require 's)
 
