@@ -454,7 +454,6 @@ equal or ampersand symbols between them."
 
 (defun lastfm--key-from-query-str (query-string)
   "Use the query string to build a key usable in alists."
-  (declare (string method-name))
   (make-symbol
    (s-replace " " ""                    ;remove all extra spaces
               ;; Some queries contain '>' others only ' '. Replace both of them
