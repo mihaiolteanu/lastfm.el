@@ -410,7 +410,7 @@ request."
 (defun lastfm--method-url (method)
   "Return the Last.fm documentation url for this method."
   (concat "https://www.last.fm/api/show/"
-          (s-replace "-" "." (symbol-name (lastfm--method-name method)))))
+          (s-replace "-" "." (symbol-name (cl-first method)))))
 
 (defun lastfm--doc-string (method)
   (cl-second method))
