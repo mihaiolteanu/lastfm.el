@@ -168,7 +168,7 @@ to access your Last.fm account? ")
      
      (getTopAlbums
       "Get the top albums for an artist, ordered by popularity."
-      :no (artist) ((limit 50)) ("album > name"))
+      :no (artist) ((limit 10)) ("album > name"))
      
      (getTopTags
       "Get the top tags for an artist, ordered by popularity."
@@ -176,7 +176,7 @@ to access your Last.fm account? ")
      
      (getTopTracks
       "Get the top tracks by an artist, ordered by popularity."
-      :no (artist) ((limit 50) (page 1))
+      :no (artist) ((limit 10) (page 1))
       ("track > name" "playcount" "listeners"))
      
      (removeTag
@@ -185,7 +185,7 @@ to access your Last.fm account? ")
      
      (search
       "Search for an artist by name. Returns artist matches sorted by relevance."
-      :no (artist) ((limit 30)) ("artist name")))
+      :no (artist) ((limit 10)) ("artist name")))
     
 
     (auth
@@ -201,25 +201,25 @@ to access your Last.fm account? ")
     (chart
      (getTopArtists
       "Get the top artists chart."
-      :no () ((limit 50)) ("artist name" "playcount" "listeners"))
+      :no () ((limit 10)) ("artist name" "playcount" "listeners"))
      
      (getTopTags
       "Get the top tags chart."
-      :no () ((limit 50)) ("tag-name"))
+      :no () ((limit 10)) ("tag-name"))
      
      (getTopTracks
       "Get the top tracks chart."
-      :no () ((limit 50)) ("artist > name" "track > name" "playcount" "listeners")))
+      :no () ((limit 10)) ("artist > name" "track > name" "playcount" "listeners")))
 
 
     (geo
      (getTopArtists
       "Get the most popular artists on Last.fm by country."
-      :no (country) ((limit 50) (page 1)) ("artist name" "playcount"))
+      :no (country) ((limit 10) (page 1)) ("artist name" "playcount"))
      
      (getTopTracks
       "Get the most popular tracks on Last.fm last week by country."
-      :no (country) ((limit 50) (page 1)) ("artist > name" "track > name" "playcount")))
+      :no (country) ((limit 10) (page 1)) ("artist > name" "track > name" "playcount")))
 
 
     (library 
@@ -240,11 +240,11 @@ to access your Last.fm account? ")
      
      (getTopAlbums
       "Get the top albums tagged by this tag, ordered by tag count."
-      :no (tag) ((limit 50) (page 1)) ("artist > name" "album > name"))
+      :no (tag) ((limit 10) (page 1)) ("artist > name" "album > name"))
      
      (getTopArtists
       "Get the top artists tagged by this tag, ordered by tag count."
-      :no (tag) ((limit 50) (page 1)) ("artist name"))
+      :no (tag) ((limit 10) (page 1)) ("artist name"))
      
      (getTopTags
       "Fetches the top global tags on Last.fm, sorted by number of times used."
@@ -252,7 +252,7 @@ to access your Last.fm account? ")
      
      (getTopTracks
       "Get the top tracks tagged by this tag, ordered by tag count."
-      :no (tag) ((limit 50) (page 1)) ("artist > name" "track > name")))
+      :no (tag) ((limit 10) (page 1)) ("artist > name" "track > name")))
     
 
     (track
@@ -295,7 +295,7 @@ to access your Last.fm account? ")
      
      (search
       "Search for a track by track name. Returned matches are sorted by relevance."
-      :no (track) ((artist nil) (limit 30) (page 1)) ("track > artist" "track > name"))
+      :no (track) ((artist nil) (limit 10) (page 1)) ("track > artist" "track > name"))
      
      (unlove
       "UnLove a track for a user profile."
@@ -311,7 +311,7 @@ to access your Last.fm account? ")
     (user
      (getfriends
       "Get a list of the user's friends on Last.fm."
-      :no (user) ((recenttracks nil) (limit 50) (page 1))
+      :no (user) ((recenttracks nil) (limit 10) (page 1))
       ("name" "realname" "country" "age" "gender" "subscriber" "playcount"))
      
      (getInfo
@@ -321,17 +321,17 @@ to access your Last.fm account? ")
      
      (getLovedTracks
       "Get the last LIMIT number of tracks loved by a user."
-      :no  () ((user lastfm--username) (limit 50) (page 1))
+      :no  () ((user lastfm--username) (limit 10) (page 1))
       ("artist > name" "track > name"))
      
      (getPersonalTags
       "Get the user's personal tags"
       :no (tag taggingtype)
-      ((user lastfm--username) (limit 50) (page 1)) ("artist name"))
+      ((user lastfm--username) (limit 10) (page 1)) ("artist name"))
      
      (getRecentTracks
       "Get a list of the recent tracks listened to by this user."
-      :no () ((user lastfm--username) (limit nil) (page nil)
+      :no () ((user lastfm--username) (limit 10) (page 1)
               (from nil) (to nil) (extended 0))
       ("track > artist" "track > name" "date"))
      
@@ -349,7 +349,7 @@ to access your Last.fm account? ")
      
      (getTopTags
       "Get the top tags used by this user."
-      :no () ((user lastfm--username) (limit nil)) ("tag name"))
+      :no () ((user lastfm--username) (limit 10)) ("tag name"))
      
      (getTopTracks
       "Get the top tracks listened to by a user. "
