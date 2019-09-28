@@ -161,7 +161,7 @@ to access your Last.fm account? ")
      (getTopTracks
       "Get the top tracks by an artist, ordered by popularity."
       :no (artist) ((limit 50) (page 1))
-      ("artist > name" "track > name" "playcount" "listeners"))
+      ("track > name" "playcount" "listeners"))
      
      (removeTag
       "Remove a user's tag from an artist."
