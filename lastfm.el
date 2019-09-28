@@ -543,21 +543,22 @@ equal or ampersand symbols between them."
 
 (defun lastfm--build-function (method)
   "Use the method data to build a complete user function."
-  (let* ((name-str (symbol-name (lastfm--method-name method)))
-         (fn-name (intern (concat "lastfm-" name-str)))
+  (let* ((fn-name (intern (concat "lastfm-"
+                                  (symbol-name (lastfm--method-name method)))))
          (params (lastfm--method-params method))
-         (key-params (lastfm--method-keyword-params method)))
+         (key-params (lastfm--method-keyword-params method))
+         (signature `(,fn-name ,(if key-params ;Name and parameters
+                                    `(,@params &key ,@key-params)
+                                  `,@params)))
+         (doc-string (concat (lastfm--doc-string method)
+                             "\n \n"
+                             "See the official Last.fm page for full documentation at"
+                             "\nURL `"
+                             (lastfm--method-url method)
+                             "'")))
     `(progn
-       (cl-defun ,fn-name ,(if key-params ;Name and parameters
-                               `(,@params &key ,@key-params)
-                             `,@params)
-         ;; Documentation string.
-         ,(concat (lastfm--doc-string method)
-                  "\n \n"
-                  "See the official Last.fm page for full documentation at"
-                  "\nURL `"
-                  (lastfm--method-url method)
-                  "'")
+       (cl-defun ,@signature
+           ,doc-string
          ;; Body.
          (lastfm--parse-response
           (lastfm--request ',method
@@ -565,6 +566,7 @@ equal or ampersand symbols between them."
                                  `(,@params ,@(mapcar #'car key-params))
                                `,params))
           ',method))
+       ;; Memoize the methods that return the same thing every time.
        ,(if (lastfm--memoizable-p method)
             `(condition-case nil
                  (memoize #',fn-name)
