@@ -396,9 +396,15 @@ list of methods. Each entry in this list is a complete lastm
 method specification. It is used to generate the API for this
 library.")
 
+(defun lastfm--raw-method-name (method)
+  "The method name with camelCase, as it appears on
+lastfm--methods."
+  (cl-first method))
+
 (defun lastfm--method-name (method)
+  "The method name with lowercase, usable for fn name."
   (make-symbol
-   (downcase (symbol-name (cl-first method)))))
+   (downcase (symbol-name (lastfm--raw-method-name method)))))
 
 (defun lastfm--method-request-string (method)
   "The method name, as a string that can be used in a lastfm
@@ -410,7 +416,8 @@ request."
 (defun lastfm--method-url (method)
   "Return the Last.fm documentation url for this method."
   (concat "https://www.last.fm/api/show/"
-          (s-replace "-" "." (symbol-name (cl-first method)))))
+          (s-replace "-" "."
+                     (symbol-name (lastfm--raw-method-name method)))))
 
 (defun lastfm--doc-string (method)
   (cl-second method))
