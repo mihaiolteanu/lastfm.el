@@ -49,6 +49,16 @@
 (require 'elquery)
 (require 's)
 
+(defgroup lastfm ()
+  "Customize Last.fm API."
+  :group 'music)
+
+(defcustom lastfm-enable-doc-generation 'nil
+  "If t, generate markdown documentation when the package is
+loaded. Only used for development purposes."
+  :type 'boolean
+  :group 'lastfm)
+
 ;;;; Configuration and setup
 (defconst lastfm--url "http://ws.audioscrobbler.com/2.0/"
   "The URL for the last.fm API version 2 used to make all the
@@ -563,6 +573,20 @@ equal or ampersand symbols between them."
                              "\nURL `"
                              (lastfm--method-url method)
                              "'")))
+
+    ;; Generate markdown documentation for this method, if needed.
+    (when lastfm-enable-doc-generation
+      (insert
+       (format "**[%s](%s)** %s\n\n    %s\n    => %s\n"
+               (cl-first signature)        ;Function name.
+               (lastfm--method-url method) ;Last.fm official doc for this method.
+               (cadr signature)            ;Function parameters.
+               (lastfm--doc-string method)
+               ;; Return elements.
+               (mapcar #'lastfm--key-from-query-str
+                       (lastfm--query-strings method)))))
+
+    ;; Build the function (this will be part of the API).
     `(progn
        (cl-defun ,@signature
            ,doc-string
