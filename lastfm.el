@@ -23,12 +23,12 @@
 
 ;;; Commentary:
 
-;; This library provides a complete interface to the Last.fm API as defined by URL
+;; lastfm.el provides a complete interface to the Last.fm API as defined by URL
 ;; `https://www.last.fm/api/'. An API account, obtainable for free from Last.fm,
 ;; is needed to use the majority of provided services. A one-time authentication
 ;; process is needed to access the rest of the methods.
 
-;; Example usage to get the top three 'duran duran' songs of all time:
+;; Example usage to get the top three Duran Duran songs of all time:
 
 ;; (lastfm-artist-gettoptracks "duran duran" :limit 3)
 ;; => (((track-name . "Ordinary World")
@@ -40,6 +40,8 @@
 ;;     ((track-name . "Come Undone")
 ;;      (playcount . "1743751")
 ;;      (listeners . "290926")))
+;;
+;; See the package URL for complete documentation and installation instructions.
 
 ;;; Code:
 
