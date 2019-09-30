@@ -24,9 +24,9 @@
 ;;; Commentary:
 
 ;; lastfm.el provides a complete interface to the Last.fm API as defined by URL
-;; `https://www.last.fm/api/'. An API account, obtainable for free from Last.fm,
-;; is needed to use the majority of provided services. A one-time authentication
-;; process is needed to access the rest of the methods.
+;; `https://www.last.fm/api/'.  An API account, obtainable for free from
+;; Last.fm, is needed to use the majority of provided services.  A one-time
+;; authentication process is needed to access the rest of the methods.
 
 ;; Example usage to get the top three Duran Duran songs of all time:
 
@@ -56,15 +56,14 @@
   :group 'music)
 
 (defcustom lastfm-enable-doc-generation 'nil
-  "If t, generate markdown documentation when the package is
-loaded. Only used for development purposes."
+  "If t, generate markdown documentation at load time.
+Only used for development purposes."
   :type 'boolean
   :group 'lastfm)
 
 ;;;; Configuration and setup
 (defconst lastfm--url "http://ws.audioscrobbler.com/2.0/"
-  "The URL for the last.fm API version 2 used to make all the
-  method calls.")
+  "The URL for the last.fm API version 2.")
 
 (defconst lastfm--config-file
   (let ((f (concat (xdg-config-home) "/.lastfmrc")))
@@ -75,9 +74,9 @@ loaded. Only used for development purposes."
   :SHARED-SECRET \"\"
   :USERNAME \"\")")))
     f)
-  "User config file holding the last.fm api-key, shared-secret,
-username and the session key. If the file does not exist when the
-package is loaded, build it with empty values.")
+  "The user config file for this library.
+The file is generated when the library is loaded the first time,
+if it doesn't already exists.")
 
 ;; The values of these configs are taken from the user config file.
 (defvar lastfm--api-key)
@@ -86,14 +85,13 @@ package is loaded, build it with empty values.")
 (defvar lastfm--sk)
 
 (defun lastfm--read-config-file ()
-  "Return the config file contents as a Lisp object"
+  "Return the config file contents as a Lisp object."
   (with-temp-buffer
     (insert-file-contents lastfm--config-file)
     (read (buffer-string))))
 
 (defun lastfm--set-config-parameters ()
-  "Read the config file and set the config parameters used
-throught the package."
+  "Initialize the variables used by all Last.fm requests."
   (let ((config (cl-rest (lastfm--read-config-file))))
     (cl-mapcar (lambda (key value)
                  (setf (pcase key
@@ -108,16 +106,14 @@ throught the package."
 (lastfm--set-config-parameters)         ;set params on start-up.
 
 (defun lastfm-generate-session-key ()
-  "Get an authorization token from last.fm and then ask the user
-to grant persmission to his last.fm account. If granted, then ask
-for the session key (sk) and append the sk value to the config's
-file list of values."
+  "Generate a session key and save it in the .lastfmrc file.
+The user needs to grant Last.fm access to his/her application."
   (let ((token (cl-first (lastfm-auth-gettoken))))
     ;; Ask the user to allow access.
     (browse-url (concat "http://www.last.fm/api/auth/?api_key="
                         lastfm--api-key
                         "&token=" token))
-    (when (yes-or-no-p "Did you grant the application persmission 
+    (when (yes-or-no-p "Did you grant the application persmission
 to access your Last.fm account? ")
       ;; If permission granted, get the sk and update the config file.
       (let* ((sk (cl-first (lastfm-auth-getsession token)))
@@ -234,7 +230,7 @@ to access your Last.fm account? ")
       :no (country) ((limit 10) (page 1)) ("artist > name" "track > name" "playcount")))
 
 
-    (library 
+    (library
      (getArtists
       "A list of all the artists in a user's library."
       :no () ((user lastfm--username) (limit 50) (page 1))
@@ -383,11 +379,11 @@ to access your Last.fm account? ")
       "Get a track chart for a user profile, for a given date range."
       :no () ((user lastfm--username) (from nil) (to nil))
       ("track > artist" "track > name" "playcount"))))
-  "List of all the supported lastfm methods. A one liner
-like (artist-getinfo ...) or (track-love ...) is more easier to
-parse, but this is easier for the eyes. The latter, the
+  "A user friendly list of all the supported lastfm methods.
+A one liner like (artist-getinfo ...) or (track-love ...) is more
+easier to parse, but this is easier for the eyes.  The latter, the
 one-liner, is generated from this list and is the one actually
-used for all the processing and generation of the user API. ")
+used for all the processing and generation of the user API.")
 
 (defconst lastfm--methods
   (let ((res nil))
@@ -403,75 +399,77 @@ used for all the processing and generation of the user API. ")
         (cl-rest group)))
      lastfm--methods-pretty)
     (reverse res))
-  "Generated list of one-liner lastfm methods from the pretty
-list of methods. Each entry in this list is a complete lastm
-method specification. It is used to generate the API for this
-library.")
+  "A computer friendly list of all lastfm methods.
+This is a generated list of one-liner lastfm methods from the
+user friendly list of methods.  Each entry in this list is a
+complete lastm method specification.  It is used to generate the
+complete API and documentation for this library.")
 
 (defun lastfm--raw-method-name (method)
-  "The method name with camelCase, as it appears on
-lastfm--methods."
+  "The unprocessed (raw) METHOD's name."
   (cl-first method))
 
 (defun lastfm--method-name (method)
-  "The method name with lowercase, usable for fn name."
+  "Return the METHOD's name used for defining the function name."
   (make-symbol
    (downcase (symbol-name (lastfm--raw-method-name method)))))
 
 (defun lastfm--method-request-string (method)
-  "The method name, as a string that can be used in a lastfm
-request."
+  "Return the METHOD's name in the format requested by Last.fm.
+This string is used as a parameter in the Last.fm request."
   (downcase
    (s-replace "-" "."
               (symbol-name (lastfm--method-name method)))))
 
 (defun lastfm--method-url (method)
-  "Return the Last.fm documentation url for this method."
+  "Return the METHOD's Last.fm documentation url."
   (concat "https://www.last.fm/api/show/"
           (s-replace "-" "."
                      (symbol-name (lastfm--raw-method-name method)))))
 
 (defun lastfm--doc-string (method)
+  "Return the METHOD's documentation string."
   (cl-second method))
 
 (defun lastfm--auth-p (method)
-  "Does this method require authentication?"
+  "Return t if this METHOD requires authentication."
   (eql (cl-third method) :yes))
 
 (defun lastfm--sk-p (method)
-  "Is this a method used for requesting the session key?"
+  "Return t if this METHOD is used for requesting the session key."
   (eql (cl-third method) :sk))
 
 (defun lastfm--memoizable-p (method)
-  "Returns t if a request to Last.fm would return the same data
-everytime."
+  "Return t if the METHOD can be safely memoized."
   (not (or (lastfm--auth-p method)
            (lastfm--sk-p method))))
 
 (defun lastfm--method-params (method)
-  "Minimum required parameters for succesfully calling this method."
+  "Return a list of required METHOD's parameters."
   (cl-fourth method))
 
 (defun lastfm--method-keyword-params (method)
+  "Return a list of METHOD's key parameters."
   (cl-fifth method))
 
 (defun lastfm--all-method-params (method)
-  "A list of all the method parameters, required plus keyword."
+  "Return a list of all the METHOD parameters."
   (append (lastfm--method-params method)
           (mapcar #'car (lastfm--method-keyword-params method))))
 
 (defun lastfm--query-strings (method)
-  "CSS selectors to parse the last.fm response with."
+  "Return the METHOD's CSS selectors as a list of strings."
   (cl-sixth method))
 
 (defun lastfm--group-params-for-signing (params)
-  "The signing procedure for authentication needs all the
-parameters and values lumped together in one big string without
-equal or ampersand symbols between them."
+  "Return all the PARAMS in one string.
+The signing procedure for authentication needs all the parameters
+and values lumped together in one big string without equal or
+ampersand symbols between them."
   (let ((res ""))
-    (mapcar (lambda (s)
-              (setf res (concat res (car s) (cdr s))))
-            params)
+    (mapc (lambda (s)
+            (setf res (concat res (car s) (cdr s))))
+          params)
     (concat res lastfm--shared-secret)))
 
 (defun lastfm--build-params (method values)
@@ -504,6 +502,8 @@ equal or ampersand symbols between them."
     result))
 
 (cl-defun lastfm--request (method &rest values)
+  "Make a Last.fm request and return the raw response.
+Pair up the METHODS's parameters with the given values VALUES."
   (let ((resp ""))
     (request lastfm--url
              :params   (lastfm--build-params method values)
@@ -516,7 +516,7 @@ equal or ampersand symbols between them."
     resp))
 
 (defun lastfm--key-from-query-str (query-string)
-  "Use the query string to build a key usable in alists."
+  "Use the QUERY-STRING to build a key usable in alists."
   (make-symbol
    (s-replace " " ""                    ;remove all extra spaces
               ;; Some queries contain '>' others only ' '. Replace both of them
@@ -526,6 +526,8 @@ equal or ampersand symbols between them."
                 (s-replace " " "-" query-string)))))
 
 (defun lastfm--parse-response (response method)
+  "Extract the relevant data from the RESPONSE.
+The METHOD holds the CSS selector strings."
   (let* ((raw-response (elquery-read-string response))
          ;; Only one error expected, if any.
          (error-str (elquery-text
@@ -561,7 +563,7 @@ equal or ampersand symbols between them."
                (apply #'-zip (helper query-strings))))))))))
 
 (defun lastfm--build-function (method)
-  "Use the method data to build a complete user function."
+  "Use the METHOD data to build a complete user function."
   (let* ((fn-name (intern (concat "lastfm-"
                                   (symbol-name (lastfm--method-name method)))))
          (params (lastfm--method-params method))
@@ -607,10 +609,11 @@ equal or ampersand symbols between them."
                ;; nothing in that case.
                (user-error nil))))))
 
-(defmacro lastfm--local-file-path (name)
-  "A file name relative to the development working folder."
+(defun lastfm--local-file-path (name)
+  "Return the NAME's absolute path.
+The path is relative to the development working folder."
   (concat (file-name-directory load-file-name)
-          ; The load file, lastfm.el, is a link to the dev folder's lastfm.el.
+          ;; The load file, lastfm.el, is a link to the dev folder's lastfm.el.
           "lastfm/" 
           name))
 
