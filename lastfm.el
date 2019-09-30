@@ -5,7 +5,7 @@
 ;; Author: Mihai Olteanu <mihai_olteanu@fastmail.fm>
 ;; Version: 1.0
 ;; Package-Requires: (request "0.3.0") (cl-lib "1.0") ((memoize "1.1") (elquery 0.1.0) (s "1.12.0"))
-;; Keywords: music
+;; Keywords: music, api
 ;; URL: https://github.com/mihaiolteanu/lastfm.el/
 
 ;; This program is free software; you can redistribute it and/or modify
