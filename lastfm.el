@@ -605,12 +605,27 @@ equal or ampersand symbols between them."
                ;; nothing in that case.
                (user-error nil))))))
 
+(defmacro lastfm--local-file-path (name)
+  "A file name relative to the development working folder."
+  (concat (file-name-directory load-file-name)
+          ; The load file, lastfm.el, is a link to the dev folder's lastfm.el.
+          "lastfm/" 
+          name))
+
 (defmacro lastfm--build-api ()
-  `(progn
-     ,@(--map (lastfm--build-function it)
-              lastfm--methods)))
+  "Generate all the API functions and their documentation."
+  (with-temp-file (lastfm--local-file-path "README_api.md")
+    `(progn
+       ,@(--map (lastfm--build-function it)
+                lastfm--methods))))
 
 (lastfm--build-api)
+
+;; Merge the generated API documentation with the handwritten one.
+(when lastfm-enable-doc-generation
+  (with-temp-file (lastfm--local-file-path "README.md")
+    (insert-file-contents (lastfm--local-file-path "README_api.md"))
+    (insert-file-contents (lastfm--local-file-path "README_overview.md"))))
 
 (provide 'lastfm)
 
