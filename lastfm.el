@@ -386,19 +386,15 @@ one-liner, is generated from this list and is the one actually
 used for all the processing and generation of the user API.")
 
 (defconst lastfm--methods
-  (let ((res nil))
-    (mapcar
-     (lambda (group)
-       (mapcar
-        (lambda (method)
-          (push (cons (make-symbol
-                       (concat (symbol-name (cl-first group)) "-"
-                               (symbol-name (cl-first method))))
-                      (cl-rest method))
-                res))
-        (cl-rest group)))
-     lastfm--methods-pretty)
-    (reverse res))
+  (let (res)
+  (dolist (group lastfm--methods-pretty)
+    (dolist (method (cdr group))
+      (push (cons (make-symbol
+                   (concat (symbol-name (cl-first group)) "-"
+                           (symbol-name (cl-first method))))
+                  (cl-rest method))
+            res)))
+  (reverse res))
   "A computer friendly list of all lastfm methods.
 This is a generated list of one-liner lastfm methods from the
 user friendly list of methods.  Each entry in this list is a
