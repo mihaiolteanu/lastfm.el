@@ -545,7 +545,7 @@ The METHOD holds the CSS selector strings."
                                           (elquery-text it))
                                     (elquery-$ (car queries) raw-response))
                              (helper (cdr queries))))))
-          (let ((result (helper query-strings)))            
+          (let ((result (helper query-strings)))
             (reverse
              ;; The cons from the helper method above groups all the text
              ;; objects from the first query string together, followed by all
@@ -612,7 +612,7 @@ The METHOD holds the CSS selector strings."
 The path is relative to the development working folder."
   (concat (file-name-directory load-file-name)
           ;; The load file, lastfm.el, is a link to the dev folder's lastfm.el.
-          "lastfm/" 
+          "lastfm/"
           name))
 
 (defmacro lastfm--build-api ()
@@ -622,13 +622,16 @@ The path is relative to the development working folder."
        ,@(--map (lastfm--build-function it)
                 lastfm--methods))))
 
-(lastfm--build-api)
+(defun lastfm--build-api-and-documentation ()
+  "Build the API and the documentation md file for it."
+  (lastfm--build-api)
+  ;; Merge the generated API documentation with the handwritten one.
+  (when lastfm-enable-doc-generation
+    (with-temp-file (lastfm--local-file-path "README.md")
+      (insert-file-contents (lastfm--local-file-path "README_api.md"))
+      (insert-file-contents (lastfm--local-file-path "README_overview.md")))))
 
-;; Merge the generated API documentation with the handwritten one.
-(when lastfm-enable-doc-generation
-  (with-temp-file (lastfm--local-file-path "README.md")
-    (insert-file-contents (lastfm--local-file-path "README_api.md"))
-    (insert-file-contents (lastfm--local-file-path "README_overview.md"))))
+(lastfm--build-api-and-documentation)
 
 (provide 'lastfm)
 
