@@ -469,7 +469,9 @@ ampersand symbols between them."
     (concat res lastfm--shared-secret)))
 
 (defun lastfm--build-params (method values)
-  "Build the parameter/value list to be used by request :params."
+  "Pair the METHOD's parameters with the supplied VALUES.
+If the method is an authentication method, an api_sig is also
+added with the corresponding signature."
   (let ((result
          `(;; The api key and method is needed for all calls.
            ("api_key" . ,lastfm--api-key)
@@ -492,9 +494,9 @@ ampersand symbols between them."
       ;; Params need to be in alphabetical order before signing.
       (setq result (cl-sort result #'string-lessp
                             :key #'cl-first))
-      (add-to-list 'result
-                   `("api_sig" . ,(md5 (lastfm--group-params-for-signing result)))
-                   t))
+      ;; Sign and append the signature.
+      (alet (lastfm--group-params-for-signing result)
+        (setq result (append result (list `("api_sig" . ,(md5 it)))))))
     result))
 
 (cl-defun lastfm--request (method &rest values)
