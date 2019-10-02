@@ -619,11 +619,16 @@ The METHOD holds the CSS selector strings."
           name))
 
 (defmacro lastfm--build-api ()
-  "Generate all the API functions and their documentation."
-  `(with-temp-file (lastfm--local-file-path "README_api.md")
-     `(progn
-        ,@(--map (lastfm--build-function it)
-                 lastfm--methods))))
+  "Generate all the API functions and, optionally, their documentation.
+Uncomment the lines on development phase to generate the
+documentation."
+  ;; (when lastfm-enable-doc-generation
+  ;;   (with-temp-file (lastfm--local-file-path "README_api.md")
+      `(progn
+         ,@(--map (lastfm--build-function it)
+                  lastfm--methods))
+      ;; ))
+  )
 
 (defun lastfm--build-api-and-documentation ()
   "Build the API and the documentation md file for it."
