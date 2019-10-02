@@ -102,7 +102,7 @@ section.
 
     Get the metadata for an artist. Includes biography, max 300 characters.
     => (bio-summary listeners playcount)
-**[lastfm-artist-getsimilar](https://www.last.fm/api/show/artist.getSimilar)** (artist &key (limit lastfm--similar-limit) (user lastfm--username))
+**[lastfm-artist-getsimilar](https://www.last.fm/api/show/artist.getSimilar)** (artist &key (limit 10) (user lastfm--username))
 
     Get all the artists similar to this artist.
     => (artist-name)
