@@ -165,7 +165,7 @@ to access your Last.fm account? ")
      
      (getSimilar
       "Get all the artists similar to this artist."
-      :no (artist) ((limit lastfm--similar-limit)
+      :no (artist) ((limit 10)
                     (user lastfm--username))
       ("artist name"))
 
