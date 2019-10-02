@@ -107,7 +107,10 @@ if it doesn't already exists.")
 
 (defun lastfm-generate-session-key ()
   "Generate a session key and save it in the .lastfmrc file.
-The user needs to grant Last.fm access to his/her application."
+The user needs to grant Last.fm access to his/her application.
+Both lastfm-auth-gettoken and lastfm-auth-getsession methods used
+here are generated based on the lastfm--methods lists so they
+don't appear as being defined anywhere."
   (let ((token (cl-first (lastfm-auth-gettoken))))
     ;; Ask the user to allow access.
     (browse-url (concat "http://www.last.fm/api/auth/?api_key="
