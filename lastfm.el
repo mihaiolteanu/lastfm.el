@@ -94,12 +94,11 @@ if it doesn't already exists.")
   "Initialize the variables used by all Last.fm requests."
   (let ((config (cl-rest (lastfm--read-config-file))))
     (cl-mapcar (lambda (key value)
-                 (setf (pcase key
-                         (:API-KEY       lastfm--api-key)
-                         (:SHARED-SECRET lastfm--shared-secret)
-                         (:USERNAME      lastfm--username)
-                         (:SK            lastfm--sk))
-                       value))
+                 (pcase key
+                   (:API-KEY       (setq lastfm--api-key value))
+                   (:SHARED-SECRET (setq lastfm--shared-secret value))
+                   (:USERNAME      (setq lastfm--username value))
+                   (:SK            (setq lastfm--sk value))))
                (cl-remove-if #'stringp config)
                (cl-remove-if #'symbolp config))))
 
