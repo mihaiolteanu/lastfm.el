@@ -49,6 +49,7 @@
 (require 'cl-lib)
 (require 'memoize)
 (require 'elquery)
+(require 'xdg)
 (require 's)
 
 (defgroup lastfm ()
