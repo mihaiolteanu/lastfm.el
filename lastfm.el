@@ -607,11 +607,11 @@ The METHOD holds the CSS selector strings."
                (user-error nil))))))
 
 (defun lastfm--local-file-path (name)
-  "Return the NAME's absolute path.
-The path is relative to the development working folder."
+  "Return the NAME's absolute path."
   (concat (file-name-directory load-file-name)
-          ;; The load file, lastfm.el, is a link to the dev folder's lastfm.el.
-          "lastfm/"
+          ;; For dev, (add-to-list 'load-path "~/.emacs.d/lisp/lastfm"), or
+          ;; wherever the lastfm.el is located, so that (require 'lastfm) works
+          ;; and the documentation is generated in the right folder.
           name))
 
 (defmacro lastfm--build-api ()
