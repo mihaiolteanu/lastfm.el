@@ -52,16 +52,6 @@
 (require 'xdg)
 (require 's)
 
-(defgroup lastfm ()
-  "Customize Last.fm API."
-  :group 'music)
-
-(defcustom lastfm-enable-doc-generation 'nil
-  "If t, generate markdown documentation at load time.
-Only used for development purposes."
-  :type 'boolean
-  :group 'lastfm)
-
 ;;;; Configuration and setup
 (defconst lastfm--url "http://ws.audioscrobbler.com/2.0/"
   "The URL for the last.fm API version 2.")
@@ -127,9 +117,31 @@ to access your Last.fm account? ")
       ;; Reload the file after the sk update.
       (lastfm--set-config-parameters))))
 
-(lastfm--defmethod album.addTags (artist album tags)
-  "Tag an album using a list of user supplied tags."
-  :yes ("lfm"))
+;;;; API methods definition.
+(defun lastfm--api-fn-name (method-name)
+  "Turn the METHOD-NAME into an API function name.
+Example: artist.addTags -> lastfm-artist-add-tags"
+  (make-symbol
+   (concat "lastfm-"
+           (--reduce (concat acc "-" it)
+                     (--map (downcase it)
+                            (s-split-words (symbol-name method-name)))))))
+
+(defmacro lastfm--defmethod (name params docstring auth query-strings)
+  (declare (indent defun))
+  (let ((fn-name (lastfm--api-fn-name name))
+        (required-params (cl-remove-if #'consp params))
+        (keyword-params (cl-remove-if #'atom params))
+        (all-params (--map (if (consp it) (car it) it) params)))
+    `(progn
+       (cl-defun ,fn-name (,@required-params &key ,@keyword-params)
+         ,docstring
+         (lastfm--parse-response
+          (lastfm--request ,name
+                           ,auth ',all-params ,@all-params)
+          ',query-strings))
+       ,(when (eq auth :no)
+          `(memoize #',fn-name)))))
 
 (lastfm--defmethod album.getInfo (artist album)
   "Get the metadata and tracklist for an album on Last.fm using the album name."
@@ -207,7 +219,7 @@ to access your Last.fm account? ")
   "Get the top tags chart."
   :no ("tag-name"))
 
-(lastfm-defmethod chart.getTopTracks ((limit 10))
+(lastfm--defmethod chart.getTopTracks ((limit 10))
   "Get the top tracks chart."
   :no ("artist > name" "track > name" "playcount" "listeners"))
 
@@ -224,7 +236,7 @@ to access your Last.fm account? ")
   :no ("artist name" "playcount" "tagcount"))
 
 (lastfm--defmethod tag.getInfo (tag)
-  "Get the metadata for a tag"
+  "Get the metadata for a TAG."
   :no ("tag summary"))
 
 (lastfm--defmethod tag.getSimilar (tag)
@@ -361,7 +373,7 @@ ampersand symbols between them."
           params)
     (concat res lastfm--shared-secret)))
 
-(defun lastfm--build-params (method-name auth-type params values)
+(defun lastfm--build-params (method-name auth params values)
   (let ((result
          `(;; The api key and method is needed for all calls.
            ("api_key" . ,lastfm--api-key)
@@ -374,10 +386,10 @@ ampersand symbols between them."
                                           (cons (symbol-name param) value)))
                                       params
                                       values)))))
-    (when (string= auth-type "sk")
+    (when (eq auth :sk)
       (push `("sk" . ,lastfm--sk) result))
-    (when (or (string= auth-type "sk")
-              (string= auth-type "auth"))
+    (when (or (eq auth :sk)
+              (eq auth :yes))
       ;; Params need to be in alphabetical order before signing.
       (setq result (cl-sort result #'string-lessp
                             :key #'cl-first))
@@ -386,10 +398,10 @@ ampersand symbols between them."
         (setq result (append result (list `("api_sig" . ,(md5 it)))))))
     result))
 
-(defun lastfm--request (method-name auth-type params &rest values)
+(defun lastfm--request (method-name auth params &rest values)
   (let (resp)
     (request lastfm--url
-             :params (lastfm--build-params method-name auth-type params values)
+             :params (lastfm--build-params method-name auth params values)
              :parser 'buffer-string
              :type   "POST"
              :sync   t
@@ -444,108 +456,12 @@ The METHOD holds the CSS selector strings."
                  (-zip-with #'list (cl-first result) (cl-second result))
                (apply #'-zip (helper query-strings)))))))))
 
-(defun lastfm--build-function (method)
-  "Use the METHOD data to build a complete user function."
-  (let* ((fn-name (intern (concat "lastfm-"
-                                  (symbol-name (lastfm--method-name method)))))
-         (params (lastfm--method-params method))
-         (key-params (lastfm--method-keyword-params method))
-         (signature `(,fn-name ,(if key-params ;Name and parameters
-                                    `(,@params &key ,@key-params)
-                                  `,@params)))
-         (doc-string (concat (lastfm--doc-string method)
-                             "\n \n"
-                             "See the official Last.fm page for full documentation at"
-                             "\nURL `"
-                             (lastfm--method-url method)
-                             "'")))
-
-    ;; Generate markdown documentation for this method, if needed.
-    (when lastfm-enable-doc-generation
-      (insert
-       (format "**[%s](%s)** %s\n\n    %s\n    => %s\n"
-               (cl-first signature)        ;Function name.
-               (lastfm--method-url method) ;Last.fm official doc for this method.
-               (cadr signature)            ;Function parameters.
-               (lastfm--doc-string method)
-               ;; Return elements.
-               (mapcar #'lastfm--key-from-query-str
-                       (lastfm--query-strings method)))))
-
-    ;; Build the function (this will be part of the API).
-    `(progn
-       (cl-defun ,@signature
-           ,doc-string
-         ;; Body.
-         (lastfm--parse-response
-          (lastfm--request ',method
-                           ,@(if key-params
-                                 `(,@params ,@(mapcar #'car key-params))
-                               `,params))
-          ',method))
-       ;; Memoize the methods that return the same thing every time.
-       ,(if (lastfm--memoizable-p method)
-            `(condition-case nil
-                 (memoize #',fn-name)
-               ;; Memoizing a function a second time returns an error. Do
-               ;; nothing in that case.
-               (user-error nil))))))
-
-(defun lastfm--local-file-path (name)
-  "Return the NAME's absolute path."
-  (concat (file-name-directory load-file-name)
-          ;; For dev, (add-to-list 'load-path "~/.emacs.d/lisp/lastfm"), or
-          ;; wherever the lastfm.el is located, so that (require 'lastfm) works
-          ;; and the documentation is generated in the right folder.
-          name))
-
-(defmacro lastfm--build-api ()
-  "Generate all the API functions and, optionally, their documentation.
-Uncomment the lines on development phase to generate the
-documentation."
-  ;; (when lastfm-enable-doc-generation
-  ;;   (with-temp-file (lastfm--local-file-path "README_api.md")
-      `(progn
-         ,@(--map (lastfm--build-function it)
-                  lastfm--methods))
-      ;; ))
-  )
-
-(defun lastfm--build-api-and-documentation ()
-  "Build the API and the documentation md file for it."
-  (lastfm--build-api)
-  ;; Merge the generated API documentation with the handwritten one.
-  (when lastfm-enable-doc-generation
-    (with-temp-file (lastfm--local-file-path "README.md")
-      (insert-file-contents (lastfm--local-file-path "README_api.md"))
-      (insert-file-contents (lastfm--local-file-path "README_overview.md")))))
-
-(lastfm--build-api-and-documentation)
-
-(defun lastfm--api-fn-name (method-name)
-  "Turn the METHOD-NAME into an API function name.
-Example: artist.addTags -> lastfm-artist-add-tags"
-  (make-symbol
-   (concat "lastfm-"
-           (--reduce (concat acc "-" it)
-                     (--map (downcase it)
-                            (s-split-words (symbol-name method-name)))))))
-
-(lastfm--api-fn-name 'artist.getSimilar)
-
-(defmacro lastfm--defmethod (name params docstring auth-type query-strings)
-  (declare (indent defun))
-  (let ((fn-name (lastfm--api-fn-name name))
-        (required-params (cl-remove-if #'consp params))
-        (keyword-params (cl-remove-if #'atom params))
-        (all-params (--map (if (consp it) (car it) it) params)))
-    `(cl-defun ,fn-name (,@required-params &key ,@keyword-params)
-       ,docstring
-       (lastfm--parse-response
-        (lastfm--request ,name
-                         ,auth-type ',all-params ,@all-params)
-        ',query-strings))))
-
 (provide 'lastfm)
 
+;; (add-to-list 'load-path "~/.emacs.d/lisp/lastfm")
+;; (progn
+;;   (unload-feature 'lastfm)
+;;   (require 'lastm))
+
 ;;; lastfm.el ends here
+
