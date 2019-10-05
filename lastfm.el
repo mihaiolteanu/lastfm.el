@@ -471,29 +471,23 @@ ampersand symbols between them."
           params)
     (concat res lastfm--shared-secret)))
 
-(defun lastfm--build-params (method values)
-  "Pair the METHOD's parameters with the supplied VALUES.
-If the method is an authentication method, an api_sig is also
-added with the corresponding signature."
+(defun lastfm--build-params (method-name auth-type params values)
   (let ((result
          `(;; The api key and method is needed for all calls.
            ("api_key" . ,lastfm--api-key)
-           ("method" . ,(lastfm--method-request-string method))
+           ("method" . ,method-name)
            ;; Pair the user supplied values with the method parameters.  If no
            ;; value supplied for a given param, do not include it in the request.
            ,@(cl-remove-if #'null
-              (cl-mapcar (lambda (param value)
-                           (when value
-                             (cons (symbol-name param) value)))
-                         (lastfm--all-method-params method)
-                         values)))))
-    ;; Session Key(SK) parameter is needed for all auth services, but not for
-    ;; the services used to obtain the SK.
-    (when (lastfm--auth-p method)
+                           (cl-mapcar (lambda (param value)
+                                        (when value
+                                          (cons (symbol-name param) value)))
+                                      params
+                                      values)))))
+    (when (string= auth-type "sk")
       (push `("sk" . ,lastfm--sk) result))
-    ;; If signing is needed, it should be added as the last parameter.
-    (when (or (lastfm--auth-p method)
-              (lastfm--sk-p method))
+    (when (or (string= auth-type "sk")
+              (string= auth-type "auth"))
       ;; Params need to be in alphabetical order before signing.
       (setq result (cl-sort result #'string-lessp
                             :key #'cl-first))
@@ -502,15 +496,13 @@ added with the corresponding signature."
         (setq result (append result (list `("api_sig" . ,(md5 it)))))))
     result))
 
-(cl-defun lastfm--request (method &rest values)
-  "Make a Last.fm request and return the raw response.
-Pair up the METHODS's parameters with the given values VALUES."
-  (let ((resp ""))
+(defun lastfm--request (method-name auth-type params &rest values)
+  (let (resp)
     (request lastfm--url
-             :params   (lastfm--build-params method values)
-             :parser   'buffer-string
-             :type     "POST"
-             :sync     t
+             :params (lastfm--build-params2 method-name auth-type params values)
+             :parser 'buffer-string
+             :type   "POST"
+             :sync   t
              :complete (cl-function
                         (lambda (&key data &allow-other-keys)
                           (setq resp data))))
@@ -526,7 +518,7 @@ Pair up the METHODS's parameters with the given values VALUES."
                   (s-replace ">" "-" query-string)
                 (s-replace " " "-" query-string)))))
 
-(defun lastfm--parse-response (response method)
+(defun lastfm--parse-response (response query-strings)
   "Extract the relevant data from the RESPONSE.
 The METHOD holds the CSS selector strings."
   (let* ((raw-response (elquery-read-string response))
@@ -535,8 +527,7 @@ The METHOD holds the CSS selector strings."
                      (cl-first (elquery-$ "error" raw-response)))))
     (if error-str
         (error error-str)
-      (let ((query-strings (lastfm--query-strings method)))
-        (cl-labels
+      (cl-labels
             ((helper (queries)
                      (if (null queries)
                          '()
@@ -561,7 +552,7 @@ The METHOD holds the CSS selector strings."
                  ;; Workaround for -zip returning a cons cell instead of a list
                  ;; when two lists are provided to it.
                  (-zip-with #'list (cl-first result) (cl-second result))
-               (apply #'-zip (helper query-strings))))))))))
+               (apply #'-zip (helper query-strings)))))))))
 
 (defun lastfm--build-function (method)
   "Use the METHOD data to build a complete user function."
@@ -640,6 +631,33 @@ documentation."
       (insert-file-contents (lastfm--local-file-path "README_overview.md")))))
 
 (lastfm--build-api-and-documentation)
+
+(defun lastfm--requestable-method-name (api-fn-name)
+  "Turn a NAME of artist-get-top-tracks into artist.gettoptracks.
+NAME is the actual API function name, with dashes. The last.fm
+method parameter in the request has a different format."
+  (let ((splitted (s-split-up-to "-" (symbol-name api-fn-name) 1)))
+  (concat (cl-first splitted)
+          "." (s-replace "-" "" (cl-second splitted)))))
+
+(defmacro lastfm--defmethod (name params docstring auth-type query-strings)
+  (declare (indent defun))
+  (let ((fn-name (intern (concat "lastfm-" (symbol-name name))))
+        (required-params (cl-remove-if #'consp params))
+        (keyword-params (cl-remove-if #'atom params))
+        (all-params (--map (if (consp it) (car it) it) params)))
+    `(cl-defun ,name (,@required-params &key ,@keyword-params)
+       ,docstring
+       (lastfm--parse-response2
+        (lastfm--request2 ,(lastfm--requestable-method-name name)
+                          ,auth-type ',all-params ,@all-params)
+        ',query-strings))))
+
+;; (lastfm--defmethod artist-get-top-tracks (artist (limit 10) (page 1))
+;;   "Get the ARTIST top tracks."
+;;   :auth ("artist > name" "track > name"))
+
+;; (artist-get-top-tracks "anathema" :limit 2)
 
 (provide 'lastfm)
 
