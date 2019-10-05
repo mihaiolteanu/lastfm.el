@@ -134,10 +134,13 @@ Example: artist.addTags -> lastfm-artist-add-tags"
         (keyword-params (cl-remove-if #'atom params))
         (all-params (--map (if (consp it) (car it) it) params)))
     `(progn
-       (cl-defun ,fn-name (,@required-params &key ,@keyword-params)
+       (cl-defun ,fn-name
+           ,(if keyword-params
+                `(,@required-params &key ,@keyword-params)
+              `(,@required-params))
          ,docstring
          (lastfm--parse-response
-          (lastfm--request ,name
+          (lastfm--request ,(symbol-name name)
                            ,auth ',all-params ,@all-params)
           ',query-strings))
        ,(when (eq auth :no)
