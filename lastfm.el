@@ -52,6 +52,21 @@
 (require 'xdg)
 (require 's)
 
+(defgroup lastfm ()
+  "Customize Last.fm API."
+  :group 'music)
+
+(defcustom lastfm-enable-doc-generation 'nil
+  "If t, generate markdown documentation at load time.
+Only used for development purposes."
+  :type 'boolean
+  :group 'lastfm)
+
+(defconst lastfm--api-doc-string ""
+  "Holds the documentation for all exported functions into this variable.
+It is filled at load time by each lastfm--defmethod and saved in
+README_api.md if lastfm-enable-doc-generation is t.")
+
 ;;;; Configuration and setup
 (defconst lastfm--url "http://ws.audioscrobbler.com/2.0/"
   "The URL for the last.fm API version 2.")
@@ -143,6 +158,14 @@ Example: artist.addTags -> lastfm-artist-add-tags"
           (lastfm--request ,(symbol-name name)
                            ,auth ',all-params ,@all-params)
           ',query-strings))
+       ;; Generate documentation for README.md.
+       (setq lastfm--api-doc-string
+             (concat lastfm--api-doc-string
+                     (format "**%s** %s\n\n    %s\n    => %s\n\n"
+                             (symbol-name ',fn-name)
+                             ',all-params-cl ,docstring
+                             ',(--map (lastfm--key-from-query-str it) query-strings))))
+       ;; Memoize, if possible.
        (when (eq ,auth :no)
          (memoize #',fn-name)))))
 
@@ -458,6 +481,19 @@ The METHOD holds the CSS selector strings."
                  ;; when two lists are provided to it.
                  (-zip-with #'list (cl-first result) (cl-second result))
                (apply #'-zip (helper query-strings)))))))))
+
+;; Generate the documentation, if needed.
+(when lastfm-enable-doc-generation
+  (let ((load-file-directory (file-name-directory load-file-name)))
+    ;; Save the api specification.
+    (with-temp-file (expand-file-name "README_api.md" load-file-directory)
+      (insert lastfm--api-doc-string))
+    ;; Combine the api specification with the package overview.
+    (with-temp-file (expand-file-name "README.md" load-file-directory)
+      (insert-file-contents
+       (expand-file-name "README_api.md" load-file-directory))
+      (insert-file-contents
+       (expand-file-name "README_overview.md" load-file-directory)))))
 
 (provide 'lastfm)
 
