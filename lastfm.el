@@ -28,19 +28,19 @@
 ;; Last.fm, is needed to use the majority of provided services.  A one-time
 ;; authentication process is needed to access the rest of the methods.
 
-;; Example usage to get the top three Duran Duran songs of all time:
+;; Example usage to get the top tracks tagged as "rock" from last.fm, based on
+;; user preferences,
 
-;; (lastfm-artist-gettoptracks "duran duran" :limit 3)
-;; => (((track-name . "Ordinary World")
-;;      (playcount . "2299087")
-;;      (listeners . "435772"))
-;;     ((track-name . "Hungry Like the Wolf")
-;;      (playcount . "1912264")
-;;      (listeners . "427961"))
-;;     ((track-name . "Come Undone")
-;;      (playcount . "1743751")
-;;      (listeners . "290926")))
-;;
+;; (lastfm-tag-get-top-tracks "rock" :limit 3)
+;; => (((artist-name . "Nirvana")     (track-name . "Smells Like Teen Spirit"))
+;;     ((artist-name . "The Killers") (track-name . "Mr Brightside"))
+;;     ((artist-name . "Oasis")       (track-name . "Wonderwall")))
+
+;; or to add a track to your list of loved songs,
+
+;; (lastfm-track-love "anathema" "springfield")
+;; => (((lfm . "")))
+
 ;; See the package URL for complete documentation and installation instructions.
 
 ;;; Code:
@@ -113,7 +113,7 @@ if it doesn't already exists.")
 (defun lastfm--first-value (resp)
   "Extract the very first value from the RESP.
 RESP usually contains a single Last.fm response element, like a
-token or sk. Return the value of that."
+token or sk.  Return the value of that."
   (cdaar resp))
 
 (defun lastfm-generate-session-key ()
@@ -140,14 +140,14 @@ to access your Last.fm account? ")
       (lastfm--set-config-parameters))))
 
 ;;;; API methods definition.
-(defun lastfm--api-fn-name (method-name)
-  "Turn the METHOD-NAME into an API function name.
+(defun lastfm--api-fn-name (method)
+  "Turn the METHOD into an API function name.
 Example: artist.addTags -> lastfm-artist-add-tags"
   (intern
    (concat "lastfm-"
            (--reduce (concat acc "-" it)
                      (--map (downcase it)
-                            (s-split-words (symbol-name method-name)))))))
+                            (s-split-words (symbol-name method)))))))
 
 (defun lastfm--key-from-query-str (query-string)
   "Use the QUERY-STRING to build a key usable in alists."
@@ -160,7 +160,26 @@ Example: artist.addTags -> lastfm-artist-add-tags"
                 (s-replace " " "-" query-string)))))
 
 (defmacro lastfm--defmethod (name params docstring auth query-strings)
-  "Build a lastfm function."
+  "Build the lastfm API function with the given NAME.
+This is the workhorse of this package and is used to build all
+the API functions.
+
+PARAMS are the function parameters and can be required parameters
+or keyword parameters but without the &key keyword, but a list
+of (param default_value) pairs.
+
+DOCSTRING is used as the documentation string for the generated
+function.
+
+AUTH is passed along to the request method that needs to decide
+what parameters to add to the last.fm request based on the type
+of authentication needed for that method, and can be :no (no
+authentication), :yes (the method requires authentication) or :sk
+which is a special authentication method needed for obtaining the
+session key(sk)).
+
+QUERY-STRINGS are passed along to the parser to decide what to
+extract and to build the request response."
   (declare (indent defun))
   (let* ((fn-name (lastfm--api-fn-name name))
          (required-params (cl-remove-if #'consp params))
@@ -174,6 +193,7 @@ Example: artist.addTags -> lastfm-artist-add-tags"
     `(progn
        (cl-defun ,fn-name ,all-params-cl
          ,docstring
+         ;; Send the request method to Last.fm and parse the response.
          (lastfm--parse-response
           (lastfm--request ,(symbol-name name)
                            ,auth ',all-params ,@all-params)
@@ -433,7 +453,7 @@ ampersand symbols between them."
 METHOD is the Last.fm method in the request URL.  If AUTH is :yes
 or :sk this method needs authentication, so the parameters need
 to be group in alphabetical order, signed and the signature
-appended at the end. PARAMS are the parameters sent in the
+appended at the end.  PARAMS are the parameters sent in the
 request to Last.fm and are grouped, one by one, with the given
 VALUES."
   (let ((result
@@ -467,7 +487,7 @@ VALUES."
 (defun lastfm--request (method auth params &rest values)
   "Send and return the Last.fm request for METHOD.
 AUTH, PARAMS and VALUES are only passed allong to
-'lastfm--build-params'. See the documentation for that method."
+'lastfm--build-params'.  See the documentation for that method."
   (let (resp)
     (request lastfm--url
              :params (lastfm--build-params method auth params values)
@@ -481,7 +501,7 @@ AUTH, PARAMS and VALUES are only passed allong to
 
 (defun lastfm--parse-response (response query-strings)
   "Extract the relevant data from the RESPONSE.
-Each string from the QUERY-STRING list of strings contains one
+Each string from the QUERY-STRINGS list of strings contains one
 CSS selector to extract the given HTML elements from the Last.fm
 RESPONSE string."
   (let* ((raw-response (elquery-read-string response))
@@ -533,8 +553,9 @@ Usually this step is done by the developer(s)."
 
 (provide 'lastfm)
 
+;; Keep for development purposes for now.
 ;; (add-to-list 'load-path "~/.emacs.d/lisp/lastfm")
-;; (progn  
+;; (progn
 ;;   (unload-feature 'lastfm)
 ;;   (setq lastfm-enable-doc-generation t)
 ;;   (require 'lastfm))
