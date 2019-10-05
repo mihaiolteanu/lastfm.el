@@ -85,10 +85,10 @@ The file is generated when the library is loaded the first time,
 if it doesn't already exists.")
 
 ;; The values of these configs are taken from the user config file.
-(defvar lastfm--api-key)
-(defvar lastfm--shared-secret)
-(defvar lastfm--username)
-(defvar lastfm--sk)
+(defconst lastfm--api-key nil)
+(defconst lastfm--shared-secret nil)
+(defconst lastfm--username nil)
+(defconst lastfm--sk nil)
 
 (defun lastfm--read-config-file ()
   "Return the config file contents as a Lisp object."
@@ -110,13 +110,20 @@ if it doesn't already exists.")
 
 (lastfm--set-config-parameters)         ;set params on start-up.
 
+(defun lastfm--first-value (resp)
+  "Extract the very first value from the RESP.
+RESP usually contains a single Last.fm response element, like a
+token or sk. Return the value of that."
+  (cdaar resp))
+
 (defun lastfm-generate-session-key ()
   "Generate a session key and save it in the .lastfmrc file.
 The user needs to grant Last.fm access to his/her application.
-Both lastfm-auth-gettoken and lastfm-auth-getsession methods used
-here are generated based on the lastfm--methods lists so they
-don't appear as being defined anywhere."
-  (let ((token (cl-first (lastfm-auth-gettoken))))
+Both lastfm-auth-get-token and lastfm-auth-get-session methods used
+here are generated with 'lastfm--defmethod'."
+  ;; Reload after the user updated the empty .lastfmrc file.
+  (lastfm--set-config-parameters)
+  (let ((token (lastfm--first-value (lastfm-auth-get-token))))
     ;; Ask the user to allow access.
     (browse-url (concat "http://www.last.fm/api/auth/?api_key="
                         lastfm--api-key
@@ -124,7 +131,7 @@ don't appear as being defined anywhere."
     (when (yes-or-no-p "Did you grant the application persmission
 to access your Last.fm account? ")
       ;; If permission granted, get the sk and update the config file.
-      (let* ((sk (cl-first (lastfm-auth-getsession token)))
+      (let* ((sk (lastfm--first-value (lastfm-auth-get-session token)))
              (config (lastfm--read-config-file))
              (config-with-sk (append config (list :SK sk))))
         (with-temp-file lastfm--config-file
@@ -142,17 +149,30 @@ Example: artist.addTags -> lastfm-artist-add-tags"
                      (--map (downcase it)
                             (s-split-words (symbol-name method-name)))))))
 
+(defun lastfm--key-from-query-str (query-string)
+  "Use the QUERY-STRING to build a key usable in alists."
+  (make-symbol
+   (s-replace " " ""                    ;remove all extra spaces
+              ;; Some queries contain '>' others only ' '. Replace both of them
+              ;; with '-'.
+              (if (s-contains-p ">" query-string)
+                  (s-replace ">" "-" query-string)
+                (s-replace " " "-" query-string)))))
+
 (defmacro lastfm--defmethod (name params docstring auth query-strings)
+  "Build a lastfm function."
   (declare (indent defun))
-  (let ((fn-name (lastfm--api-fn-name name))
-        (required-params (cl-remove-if #'consp params))
-        (keyword-params (cl-remove-if #'atom params))
-        (all-params (--map (if (consp it) (car it) it) params)))
+  (let* ((fn-name (lastfm--api-fn-name name))
+         (required-params (cl-remove-if #'consp params))
+         (keyword-params (cl-remove-if #'atom params))
+         ;; Combine params to form a valid cl-defun signature.
+         (all-params-cl (if keyword-params
+                            `(,@required-params &key ,@keyword-params)
+                          `(,@required-params)) )
+         ;; Same as above, but without the &key keyword.
+         (all-params (--map (if (consp it) (car it) it) params)))
     `(progn
-       (cl-defun ,fn-name
-           ,(if keyword-params
-                `(,@required-params &key ,@keyword-params)
-              `(,@required-params))
+       (cl-defun ,fn-name ,all-params-cl
          ,docstring
          (lastfm--parse-response
           (lastfm--request ,(symbol-name name)
@@ -164,10 +184,15 @@ Example: artist.addTags -> lastfm-artist-add-tags"
                      (format "**%s** %s\n\n    %s\n    => %s\n\n"
                              (symbol-name ',fn-name)
                              ',all-params-cl ,docstring
-                             ',(--map (lastfm--key-from-query-str it) query-strings))))
+                             ',(--map (lastfm--key-from-query-str it)
+                                      query-strings))))
        ;; Memoize, if possible.
        (when (eq ,auth :no)
-         (memoize #',fn-name)))))
+         (condition-case nil
+             (memoize #',fn-name)
+           ;; Memoizing a function a second time returns an error.
+           ;; Ignore the error and do nothing.
+           (user-error nil))))))
 
 (lastfm--defmethod album.getInfo (artist album)
   "Get the metadata and tracklist for an album on Last.fm using the album name."
@@ -325,6 +350,10 @@ Example: artist.addTags -> lastfm-artist-add-tags"
   "Search for a track by track name. Returned matches are sorted by relevance."
   :no ("track > artist" "track > name"))
 
+(lastfm--defmethod track.unlove (artist track)
+  "UnLove a track for a user profile."
+  :yes ("lfm"))
+
 (lastfm--defmethod track.updateNowPlaying
   (artist track (album nil) (tracknumber nil) (context nil)
           (duration nil) (albumartist nil))
@@ -399,21 +428,32 @@ ampersand symbols between them."
           params)
     (concat res lastfm--shared-secret)))
 
-(defun lastfm--build-params (method-name auth params values)
+(defun lastfm--build-params (method auth params values)
+  "Build the Last.fm POST request for the given METHOD.
+METHOD is the Last.fm method in the request URL.  If AUTH is :yes
+or :sk this method needs authentication, so the parameters need
+to be group in alphabetical order, signed and the signature
+appended at the end. PARAMS are the parameters sent in the
+request to Last.fm and are grouped, one by one, with the given
+VALUES."
   (let ((result
          `(;; The api key and method is needed for all calls.
            ("api_key" . ,lastfm--api-key)
-           ("method" . ,method-name)
+           ("method" . ,method)
            ;; Pair the user supplied values with the method parameters.  If no
-           ;; value supplied for a given param, do not include it in the request.
-           ,@(cl-remove-if #'null
-                           (cl-mapcar (lambda (param value)
+           ;; value supplied for a given param, do not include it in the
+           ;; request, meaning, the default value specified by the Last.fm API
+           ;; will be used instead.
+           ,@(cl-remove-if #'null (cl-mapcar (lambda (param value)
                                         (when value
                                           (cons (symbol-name param) value)))
                                       params
                                       values)))))
-    (when (eq auth :sk)
+    ;; The Session Key (SK) is needed for all auth services, but not for
+    ;; the services used to actually obtain the SK.
+    (when (eq auth :yes)
       (push `("sk" . ,lastfm--sk) result))
+    ;; If the method needs authentication, then signing is necessary.
     (when (or (eq auth :sk)
               (eq auth :yes))
       ;; Params need to be in alphabetical order before signing.
@@ -424,10 +464,13 @@ ampersand symbols between them."
         (setq result (append result (list `("api_sig" . ,(md5 it)))))))
     result))
 
-(defun lastfm--request (method-name auth params &rest values)
+(defun lastfm--request (method auth params &rest values)
+  "Send and return the Last.fm request for METHOD.
+AUTH, PARAMS and VALUES are only passed allong to
+'lastfm--build-params'. See the documentation for that method."
   (let (resp)
     (request lastfm--url
-             :params (lastfm--build-params method-name auth params values)
+             :params (lastfm--build-params method auth params values)
              :parser 'buffer-string
              :type   "POST"
              :sync   t
@@ -436,19 +479,11 @@ ampersand symbols between them."
                           (setq resp data))))
     resp))
 
-(defun lastfm--key-from-query-str (query-string)
-  "Use the QUERY-STRING to build a key usable in alists."
-  (make-symbol
-   (s-replace " " ""                    ;remove all extra spaces
-              ;; Some queries contain '>' others only ' '. Replace both of them
-              ;; with '-'.
-              (if (s-contains-p ">" query-string)
-                  (s-replace ">" "-" query-string)
-                (s-replace " " "-" query-string)))))
-
 (defun lastfm--parse-response (response query-strings)
   "Extract the relevant data from the RESPONSE.
-The METHOD holds the CSS selector strings."
+Each string from the QUERY-STRING list of strings contains one
+CSS selector to extract the given HTML elements from the Last.fm
+RESPONSE string."
   (let* ((raw-response (elquery-read-string response))
          ;; Only one error expected, if any.
          (error-str (elquery-text
@@ -456,51 +491,53 @@ The METHOD holds the CSS selector strings."
     (if error-str
         (error error-str)
       (cl-labels
-            ((helper (queries)
-                     (if (null queries)
-                         '()
-                       ;; Use the same raw response to extract a different text
-                       ;; object each time, according to the current query
-                       ;; string. Build an alist from the query string and the
-                       ;; extracted text object.
-                       (cons (--map (cons (lastfm--key-from-query-str (car queries))
-                                          (elquery-text it))
-                                    (elquery-$ (car queries) raw-response))
-                             (helper (cdr queries))))))
-          (let ((result (helper query-strings)))
-            (reverse
-             ;; The cons from the helper method above groups all the text
-             ;; objects from the first query string together, followed by all
-             ;; the text objects from the next query string grouped together and
-             ;; so on until all the query strings are exhausted. If the query
-             ;; string would look like '("artist" "song") then we would have
-             ;; '((artist1 artist2) (song1 song2)) as a result from the helper
-             ;; method, but we want '((artist1 songs1) (artist2 song2)) instead.
-             (if (= (length query-strings) 2)
-                 ;; Workaround for -zip returning a cons cell instead of a list
-                 ;; when two lists are provided to it.
-                 (-zip-with #'list (cl-first result) (cl-second result))
-               (apply #'-zip (helper query-strings)))))))))
+          ((helper (queries)
+                   (if (null queries)
+                       '()
+                     ;; Use the same Last.fm response to extract a different HTML
+                     ;; element each time, according to the current query
+                     ;; string. Build an alist from the query string and the
+                     ;; extracted element.
+                     (cons (--map (cons (lastfm--key-from-query-str (car queries))
+                                        (elquery-text it))
+                                  (elquery-$ (car queries) raw-response))
+                           (helper (cdr queries))))))
+        (let ((result (helper query-strings)))
+          (reverse
+           ;; If the query string looks like '("artist" "song") the result
+           ;; until now would be '((artist1 artist2) (song1 song2)) but
+           ;; '((artist1 songs1) (artist2 song2)) is needed instead.
+           (if (= (length query-strings) 2)
+               ;; Workaround for -zip returning a cons cell instead of a list
+               ;; when two lists are provided to it.
+               (-zip-with #'list (cl-first result) (cl-second result))
+             (apply #'-zip (helper query-strings)))))))))
 
-;; Generate the documentation, if needed.
-(when lastfm-enable-doc-generation
-  (let ((load-file-directory (file-name-directory load-file-name)))
+;; Generate the README.md documentation, if needed.
+(defun lastfm--generate-documentation (folder)
+  "Generate and save the package documentation in the FOLDER.
+Usually this step is done by the developer(s)."
+  (when lastfm-enable-doc-generation
     ;; Save the api specification.
-    (with-temp-file (expand-file-name "README_api.md" load-file-directory)
+    (with-temp-file (expand-file-name "README_api.md" folder)
       (insert lastfm--api-doc-string))
     ;; Combine the api specification with the package overview.
-    (with-temp-file (expand-file-name "README.md" load-file-directory)
+    (with-temp-file (expand-file-name "README.md" folder)
       (insert-file-contents
-       (expand-file-name "README_api.md" load-file-directory))
+       (expand-file-name "README_api.md" folder))
       (insert-file-contents
-       (expand-file-name "README_overview.md" load-file-directory)))))
+       (expand-file-name "README_overview.md" folder)))))
+
+;; Use the package location folder.
+(lastfm--generate-documentation (file-name-directory load-file-name))
 
 (provide 'lastfm)
 
 ;; (add-to-list 'load-path "~/.emacs.d/lisp/lastfm")
-;; (progn
+;; (progn  
 ;;   (unload-feature 'lastfm)
-;;   (require 'lastm))
+;;   (setq lastfm-enable-doc-generation t)
+;;   (require 'lastfm))
 
 ;;; lastfm.el ends here
 
