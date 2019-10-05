@@ -121,7 +121,7 @@ to access your Last.fm account? ")
 (defun lastfm--api-fn-name (method-name)
   "Turn the METHOD-NAME into an API function name.
 Example: artist.addTags -> lastfm-artist-add-tags"
-  (make-symbol
+  (intern
    (concat "lastfm-"
            (--reduce (concat acc "-" it)
                      (--map (downcase it)
@@ -143,8 +143,8 @@ Example: artist.addTags -> lastfm-artist-add-tags"
           (lastfm--request ,(symbol-name name)
                            ,auth ',all-params ,@all-params)
           ',query-strings))
-       ,(when (eq auth :no)
-          `(memoize #',fn-name)))))
+       (when (eq ,auth :no)
+         (memoize #',fn-name)))))
 
 (lastfm--defmethod album.getInfo (artist album)
   "Get the metadata and tracklist for an album on Last.fm using the album name."
