@@ -127,338 +127,228 @@ to access your Last.fm account? ")
       ;; Reload the file after the sk update.
       (lastfm--set-config-parameters))))
 
-(defconst lastfm--methods-pretty
-  '((album
-     (addTags
-      "Tag an album using a list of user supplied tags."
-      :yes (artist album tags) () ("lfm"))
-     
-     (getInfo
-      "Get the metadata and tracklist for an album on Last.fm using the album name."
-      :no (artist album) () ("track > name"))
-     
-     (getTags
-      "Get the tags applied by an individual user to an album on Last.fm."
-      :yes (artist album) () ("tag name" "tag count"))
-     
-     (getTopTags
-      "Get the top tags for an album on Last.fm, ordered by popularity."
-      :no (artist album) () ("tag name" "tag count"))
-     
-     (removeTag
-      "Remove a user's tag from an album."
-      :yes (artist album tag) () ("lfm"))
-     
-     (search
-      "Search for an album by name. Returns album matches sorted by relevance."
-      :no (album) ((limit 10)) ("album artist" "album name")))
-    
+(lastfm--defmethod album.addTags (artist album tags)
+  "Tag an album using a list of user supplied tags."
+  :yes ("lfm"))
 
-    (artist
-     (addTags
-      "Tag an artist with one or more user supplied tags."
-      :yes (artist tags) () ("lfm"))
-     
-     (getCorrection
-      "Check whether the artist has a correction to a canonical artist."
-      :no (artist) () ("artist name"))
-     
-     (getInfo
-      "Get the metadata for an artist. Includes biography, max 300 characters."
-      :no (artist) () ("bio summary" "listeners" "playcount"))
-     
-     (getSimilar
-      "Get all the artists similar to this artist."
-      :no (artist) ((limit 10)
-                    (user lastfm--username))
-      ("artist name"))
+(lastfm--defmethod album.getInfo (artist album)
+  "Get the metadata and tracklist for an album on Last.fm using the album name."
+  :no ("track > name"))
 
-     (getTags
-      "Get the tags applied by an individual user to an artist on Last.fm."
-      :yes (artist) () ("tag name"))
-     
-     (getTopAlbums
-      "Get the top albums for an artist, ordered by popularity."
-      :no (artist) ((limit 10)) ("album > name"))
-     
-     (getTopTags
-      "Get the top tags for an artist, ordered by popularity."
-      :no (artist) () ("tag name"))
-     
-     (getTopTracks
-      "Get the top tracks by an artist, ordered by popularity."
-      :no (artist) ((limit 10) (page 1))
-      ("track > name" "playcount" "listeners"))
-     
-     (removeTag
-      "Remove a user's tag from an artist."
-      :yes (artist tag) () ("lfm"))
-     
-     (search
-      "Search for an artist by name. Returns artist matches sorted by relevance."
-      :no (artist) ((limit 10)) ("artist name")))
-    
+(lastfm--defmethod album.getTags (artist album)
+  "Get the tags applied by an individual user to an album on Last.fm."
+  :yes ("tag name" "tag count"))
 
-    (auth
-     (getToken
-      "Fetch a session key for a user (3rd step in the auth process)."
-      :sk () () ("token"))
-     
-     (getSession
-      "Fetch an unathorized request token (2nd step of the auth process)."
-      :sk (token) () ("session key")))
-    
+(lastfm--defmethod album.getTopTags (artist album)
+  "Get the top tags for an album on Last.fm, ordered by popularity."
+  :no ("tag name" "tag count"))
 
-    (chart
-     (getTopArtists
-      "Get the top artists chart."
-      :no () ((limit 10)) ("artist name" "playcount" "listeners"))
-     
-     (getTopTags
-      "Get the top tags chart."
-      :no () ((limit 10)) ("tag-name"))
-     
-     (getTopTracks
-      "Get the top tracks chart."
-      :no () ((limit 10)) ("artist > name" "track > name" "playcount" "listeners")))
+(lastfm--defmethod album.removeTag (artist album tag)
+  "Remove a user's tag from an album."
+  :yes ("lfm"))
 
+(lastfm--defmethod album.search (album (limit 10))
+  "Search for an album by name. Returns album matches sorted by relevance."
+  :no ("album artist" "album name"))
 
-    (geo
-     (getTopArtists
-      "Get the most popular artists on Last.fm by country."
-      :no (country) ((limit 10) (page 1)) ("artist name" "playcount"))
-     
-     (getTopTracks
-      "Get the most popular tracks on Last.fm last week by country."
-      :no (country) ((limit 10) (page 1)) ("artist > name" "track > name" "playcount")))
+(lastfm--defmethod artist.addTags (artist tags)
+  "Tag an artist with one or more user supplied tags."
+  :yes ("lfm"))
 
+(lastfm--defmethod artist.getCorrection (artist)
+  "Check whether the artist has a correction to a canonical artist."
+  :no ("artist name"))
 
-    (library
-     (getArtists
-      "A list of all the artists in a user's library."
-      :no () ((user lastfm--username) (limit 50) (page 1))
-      ("artist name" "playcount" "tagcount")))
+(lastfm--defmethod artist.getInfo (artist)
+  "Get the metadata for an artist. Includes biography, max 300 characters."
+  :no ("bio summary" "listeners" "playcount"))
 
+(lastfm--defmethod artist.getSimilar (artist (limit 10) (user lastfm--username))
+  "Get all the artists similar to this artist."
+  :no ("artist name"))
 
-    (tag
-     (getInfo
-      "Get the metadata for a tag"
-      :no (tag) () ("tag summary"))
-     
-     (getSimilar
-      "Search for tags similar to this one, based on listening data."
-      :no (tag) () ("tag name")) ;Doesn't return anything
-     
-     (getTopAlbums
-      "Get the top albums tagged by this tag, ordered by tag count."
-      :no (tag) ((limit 10) (page 1)) ("artist > name" "album > name"))
-     
-     (getTopArtists
-      "Get the top artists tagged by this tag, ordered by tag count."
-      :no (tag) ((limit 10) (page 1)) ("artist name"))
-     
-     (getTopTags
-      "Fetches the top global tags on Last.fm, sorted by number of times used."
-      :no () () ("tag name"))
-     
-     (getTopTracks
-      "Get the top tracks tagged by this tag, ordered by tag count."
-      :no (tag) ((limit 10) (page 1)) ("artist > name" "track > name")))
-    
+(lastfm--defmethod artist.getTags (artist)
+  "Get the tags applied by an individual user to an artist on Last.fm."
+  :yes ("tag name"))
 
-    (track
-     (addTags
-      "Tag an album using a list of user supplied tags."
-      :yes (artist track tags) () ("lfm"))
-     
-     (getCorrection
-      "Check whether the supplied track has a correction to a canonical track."
-      :no (artist track) () ("artist > name" "track > name"))
-     
-     (getInfo
-      "Get the track metadata."
-      :no (artist track) () ("album title" "tag name" "playcount" "listeners"))
-     
-     (getSimilar
-      "Get similar tracks to this one, based on listening data."
-      :no (artist track) ((limit 10))
-      ("artist > name" "track > name")) ;; Method doesn't return anything from lastfm
-     
-     (getTags
-      "Get the tags applied by an individual user to a track."
-      :yes (artist track) () ("name"))
-     
-     (getTopTags
-      "Get the top tags for this track, ordered by tag count."
-      :no (artist track) () ("name"))
-     
-     (love
-      "Love a track for a user profile."
-      :yes (artist track) () ("lfm"))
-     
-     (removeTag
-      "Remove a user's tag from a track."
-      :yes (artist track tag) () ("lfm"))
-     
-     (scrobble
-      "Add a track to the user listened tracks."
-      :yes (artist track timestamp) () ("lfm"))
-     
-     (search
-      "Search for a track by track name. Returned matches are sorted by relevance."
-      :no (track) ((artist nil) (limit 10) (page 1)) ("track > artist" "track > name"))
-     
-     (unlove
-      "UnLove a track for a user profile."
-      :yes (artist track) () ("lfm"))
-     
-     (updateNowPlaying
-      "Notify Last.fm that a user has started listening to a track."
-      :yes (artist track)
-      ((album nil) (tracknumber nil) (context nil) (duration nil)
-       (albumartist nil)) ("lfm")))
-    
+(lastfm--defmethod artist.getTopAlbums (artist (limit 10))
+  "Get the top albums for an artist, ordered by popularity."
+  :no ("album > name"))
 
-    (user
-     (getfriends
-      "Get a list of the user's friends on Last.fm."
-      :no (user) ((recenttracks nil) (limit 10) (page 1))
-      ("name" "realname" "country" "age" "gender" "subscriber" "playcount"))
-     
-     (getInfo
-      "Get information about a user profile."
-      :no () ((user lastfm--username))
-      ("name" "realname" "country" "age" "gender" "subscriber" "playcount"))
-     
-     (getLovedTracks
-      "Get the last LIMIT number of tracks loved by a user."
-      :no  () ((user lastfm--username) (limit 10) (page 1))
-      ("artist > name" "track > name"))
-     
-     (getPersonalTags
-      "Get the user's personal tags"
-      :no (tag taggingtype)
-      ((user lastfm--username) (limit 10) (page 1)) ("artist name"))
-     
-     (getRecentTracks
-      "Get a list of the recent tracks listened to by this user."
-      :no () ((user lastfm--username) (limit 10) (page 1)
-              (from nil) (to nil) (extended 0))
-      ("track > artist" "track > name" "date"))
-     
-     (getTopAlbums
-      "Get the top albums listened to by a user"
-      :no () ((user lastfm--username) (period nil)
-              (limit nil) (page nil))
-      ("artist > name" "album > name" "playcount"))
-     
-     (getTopArtists
-      "Get the top artists listened to by a user."
-      :no () ((user lastfm--username) (period nil)
-              (limit nil) (page nil))
-      ("artist name" "playcount"))
-     
-     (getTopTags
-      "Get the top tags used by this user."
-      :no () ((user lastfm--username) (limit 10)) ("tag name"))
-     
-     (getTopTracks
-      "Get the top tracks listened to by a user. "
-      :no () ((user lastfm--username) (period nil)
-              (limit nil) (page nil))
-      ("artist > name" "track > name" "playcount"))
-     
-     (getWeeklyAlbumChart
-      "Get an album chart for a user profile, for a given date range."
-      :no () ((user lastfm--username) (from nil) (to nil))
-      ("album > artist" "album > name" "playcount"))
-     
-     (getWeeklyArtistChart
-      "Get an artist chart for a user profile, for a given date range."
-      :no () ((user lastfm--username) (from nil) (to nil))
-      ("artist > name" "playcount"))
-     
-     (getWeeklyTrackChart
-      "Get a track chart for a user profile, for a given date range."
-      :no () ((user lastfm--username) (from nil) (to nil))
-      ("track > artist" "track > name" "playcount"))))
-  "A user friendly list of all the supported lastfm methods.
-A one liner like (artist-getinfo ...) or (track-love ...) is more
-easier to parse, but this is easier for the eyes.  The latter, the
-one-liner, is generated from this list and is the one actually
-used for all the processing and generation of the user API.")
+(lastfm--defmethod artist.getTopTags (artist)
+  "Get the top tags for an artist, ordered by popularity."
+  :no ("tag name"))
 
-(defconst lastfm--methods
-  (let (res)
-  (dolist (group lastfm--methods-pretty)
-    (dolist (method (cdr group))
-      (push (cons (make-symbol
-                   (concat (symbol-name (cl-first group)) "-"
-                           (symbol-name (cl-first method))))
-                  (cl-rest method))
-            res)))
-  (reverse res))
-  "A computer friendly list of all lastfm methods.
-This is a generated list of one-liner lastfm methods from the
-user friendly list of methods.  Each entry in this list is a
-complete lastm method specification.  It is used to generate the
-complete API and documentation for this library.")
+(lastfm--defmethod artist.getTopTracks (artist (limit 10) (page 1))
+  "Get the top tracks by an artist, ordered by popularity."
+  :no ("track > name" "playcount" "listeners"))
 
-(defun lastfm--raw-method-name (method)
-  "The unprocessed (raw) METHOD's name."
-  (cl-first method))
+(lastfm--defmethod artist.removeTag (artist tag)
+  "Remove a user's tag from an artist."
+  :yes ("lfm"))
 
-(defun lastfm--method-name (method)
-  "Return the METHOD's name used for defining the function name."
-  (make-symbol
-   (downcase (symbol-name (lastfm--raw-method-name method)))))
+(lastfm--defmethod artist.search (artist (limit 10))
+  "Search for an artist by name. Returns artist matches sorted by relevance."
+  :no ("artist name"))
 
-(defun lastfm--method-request-string (method)
-  "Return the METHOD's name in the format requested by Last.fm.
-This string is used as a parameter in the Last.fm request."
-  (downcase
-   (s-replace "-" "."
-              (symbol-name (lastfm--method-name method)))))
+(lastfm--defmethod auth.getToken ()
+  "Fetch a session key for a user (3rd step in the auth process)."
+  :sk ("token"))
 
-(defun lastfm--method-url (method)
-  "Return the METHOD's Last.fm documentation url."
-  (concat "https://www.last.fm/api/show/"
-          (s-replace "-" "."
-                     (symbol-name (lastfm--raw-method-name method)))))
+(lastfm--defmethod auth.getSession (token)
+  "Fetch an unathorized request token (2nd step of the auth process)."
+  :sk ("session key"))
 
-(defun lastfm--doc-string (method)
-  "Return the METHOD's documentation string."
-  (cl-second method))
+(lastfm--defmethod chart.getTopArtists ((limit 10))
+  "Get the top artists chart."
+  :no ("artist name" "playcount" "listeners"))
 
-(defun lastfm--auth-p (method)
-  "Return t if this METHOD requires authentication."
-  (eql (cl-third method) :yes))
+(lastfm--defmethod chart.getTopTags ((limit 10))
+  "Get the top tags chart."
+  :no ("tag-name"))
 
-(defun lastfm--sk-p (method)
-  "Return t if this METHOD is used for requesting the session key."
-  (eql (cl-third method) :sk))
+(lastfm-defmethod chart.getTopTracks ((limit 10))
+  "Get the top tracks chart."
+  :no ("artist > name" "track > name" "playcount" "listeners"))
 
-(defun lastfm--memoizable-p (method)
-  "Return t if the METHOD can be safely memoized."
-  (not (or (lastfm--auth-p method)
-           (lastfm--sk-p method))))
+(lastfm--defmethod geo.getTopArtists (country (limit 10) (page 1))
+  "Get the most popular artists on Last.fm by country."
+  :no ("artist name" "playcount"))
 
-(defun lastfm--method-params (method)
-  "Return a list of required METHOD's parameters."
-  (cl-fourth method))
+(lastfm--defmethod geo.getTopTracks (country (limit 10) (page 1))
+  "Get the most popular tracks on Last.fm last week by country."
+  :no ("artist > name" "track > name" "playcount"))
 
-(defun lastfm--method-keyword-params (method)
-  "Return a list of METHOD's key parameters."
-  (cl-fifth method))
+(lastfm--defmethod library.getArtists ((user lastfm--username) (limit 50) (page 1))
+  "A list of all the artists in a user's library."
+  :no ("artist name" "playcount" "tagcount"))
 
-(defun lastfm--all-method-params (method)
-  "Return a list of all the METHOD parameters."
-  (append (lastfm--method-params method)
-          (mapcar #'car (lastfm--method-keyword-params method))))
+(lastfm--defmethod tag.getInfo (tag)
+  "Get the metadata for a tag"
+  :no ("tag summary"))
 
-(defun lastfm--query-strings (method)
-  "Return the METHOD's CSS selectors as a list of strings."
-  (cl-sixth method))
+(lastfm--defmethod tag.getSimilar (tag)
+  "Search for tags similar to this one, based on listening data."
+  :no ("tag name"))
+
+(lastfm--defmethod tag.getTopAlbums (tag (limit 10) (page 1))
+  "Get the top albums tagged by this tag, ordered by tag count."
+  :no ("artist > name" "album > name"))
+
+(lastfm--defmethod tag.getTopArtists (tag (limit 10) (page 1))
+  "Get the top artists tagged by this tag, ordered by tag count."
+  :no ("artist name"))
+
+(lastfm--defmethod tag.getTopTags ()
+  "Fetches the top global tags on Last.fm, sorted by number of times used."
+  :no ("tag name"))
+
+(lastfm--defmethod tag.getTopTracks (tag (limit 10) (page 1))
+  "Get the top tracks tagged by this tag, ordered by tag count."
+  :no ("artist > name" "track > name"))
+
+(lastfm--defmethod track.addTags (artist track tags)
+  "Tag an album using a list of user supplied tags."
+  :yes ("lfm"))
+
+(lastfm--defmethod track.getCorrection (artist track)
+  "Check whether the supplied track has a correction to a canonical track."
+  :no ("artist > name" "track > name"))
+
+(lastfm--defmethod track.getInfo (artist track)
+  "Get the track metadata."
+  :no ("album title" "tag name" "playcount" "listeners"))
+
+(lastfm--defmethod track.getSimilar (artist track (limit 10))
+  "Get similar tracks to this one, based on listening data."
+  :no ("artist > name" "track > name"))
+
+(lastfm--defmethod track.getTags (artist track)
+  "Get the tags applied by an individual user to a track."
+  :yes ("name"))
+
+(lastfm--defmethod track.getTopTags (artist track)
+  "Get the top tags for this track, ordered by tag count."
+  :no ("name"))
+
+(lastfm--defmethod track.love (artist track)
+  "Love a track for a user profile."
+  :yes ("lfm"))
+
+(lastfm--defmethod track.removeTag (artist track tag)
+  "Remove a user's tag from a track."
+  :yes ("lfm"))
+
+(lastfm--defmethod track.scrobble (artist track timestamp)
+  "Add a track to the user listened tracks."
+  :yes ("lfm"))
+
+(lastfm--defmethod track.search (track (artist nil) (limit 10) (page 1))
+  "Search for a track by track name. Returned matches are sorted by relevance."
+  :no ("track > artist" "track > name"))
+
+(lastfm--defmethod track.updateNowPlaying
+  (artist track (album nil) (tracknumber nil) (context nil)
+          (duration nil) (albumartist nil))
+  "Notify Last.fm that a user has started listening to a track."
+  :yes ("lfm"))
+
+(lastfm--defmethod user.getfriends (user (limit 10) (page 1))
+  "Get a list of the user's friends on Last.fm."
+  :no ("name" "realname" "country" "age" "gender" "subscriber" "playcount"))
+
+(lastfm--defmethod user.getInfo ((user lastfm--username))
+  "Get information about a USER profile."
+  :no ("name" "realname" "country" "age" "gender" "subscriber" "playcount"))
+
+(lastfm--defmethod user.getLovedTracks ((user lastfm--username) (limit 10) (page 1))
+  "Get the last LIMIT number of tracks loved by a USER."
+  :no ("artist > name" "track > name"))
+
+(lastfm--defmethod user.getPersonalTags
+  (tag taggingtype (user lastfm--username) (limit 10) (page 1))
+  "Get the user's personal TAGs."
+  :no ("artist name"))
+
+(lastfm--defmethod user.getRecentTracks
+  ((user lastfm--username) (limit 10) (page 1) (from nil) (to nil) (extended 0))
+  "Get a list of the recent tracks listened to by this user."
+  :no ("track > artist" "track > name" "date"))
+
+(lastfm--defmethod user.getTopAlbums
+  ((user lastfm--username) (period nil) (limit nil) (page nil))
+  "Get the top albums listened to by a user"
+  :no ("artist > name" "album > name" "playcount"))
+
+(lastfm--defmethod user.getTopArtists
+  ((user lastfm--username) (period nil) (limit nil) (page nil))
+  "Get the top artists listened to by a user."
+  :no ("artist name" "playcount"))
+
+(lastfm--defmethod user.getTopTags
+  ((user lastfm--username) (limit 10))
+  "Get the top tags used by this user."
+  :no ("tag name"))
+
+(lastfm--defmethod user.getTopTracks
+  ((user lastfm--username) (period nil) (limit nil) (page nil))
+  "Get the top tracks listened to by a user. "
+  :no ("artist > name" "track > name" "playcount"))
+
+(lastfm--defmethod user.getWeeklyAlbumChart
+  ((user lastfm--username) (from nil) (to nil))
+  "Get an album chart for a user profile, for a given date range."
+  :no ("album > artist" "album > name" "playcount"))
+
+(lastfm--defmethod user.getWeeklyArtistChart
+  ((user lastfm--username) (from nil) (to nil))
+  "Get an artist chart for a user profile, for a given date range."
+  :no ("artist > name" "playcount"))
+
+(lastfm--defmethod user.getWeeklyTrackChart
+  ((user lastfm--username) (from nil) (to nil))
+  "Get a track chart for a user profile, for a given date range."
+  :no ("track > artist" "track > name" "playcount"))
 
 (defun lastfm--group-params-for-signing (params)
   "Return all the PARAMS in one string.
@@ -499,7 +389,7 @@ ampersand symbols between them."
 (defun lastfm--request (method-name auth-type params &rest values)
   (let (resp)
     (request lastfm--url
-             :params (lastfm--build-params2 method-name auth-type params values)
+             :params (lastfm--build-params method-name auth-type params values)
              :parser 'buffer-string
              :type   "POST"
              :sync   t
@@ -632,32 +522,29 @@ documentation."
 
 (lastfm--build-api-and-documentation)
 
-(defun lastfm--requestable-method-name (api-fn-name)
-  "Turn a NAME of artist-get-top-tracks into artist.gettoptracks.
-NAME is the actual API function name, with dashes. The last.fm
-method parameter in the request has a different format."
-  (let ((splitted (s-split-up-to "-" (symbol-name api-fn-name) 1)))
-  (concat (cl-first splitted)
-          "." (s-replace "-" "" (cl-second splitted)))))
+(defun lastfm--api-fn-name (method-name)
+  "Turn the METHOD-NAME into an API function name.
+Example: artist.addTags -> lastfm-artist-add-tags"
+  (make-symbol
+   (concat "lastfm-"
+           (--reduce (concat acc "-" it)
+                     (--map (downcase it)
+                            (s-split-words (symbol-name method-name)))))))
+
+(lastfm--api-fn-name 'artist.getSimilar)
 
 (defmacro lastfm--defmethod (name params docstring auth-type query-strings)
   (declare (indent defun))
-  (let ((fn-name (intern (concat "lastfm-" (symbol-name name))))
+  (let ((fn-name (lastfm--api-fn-name name))
         (required-params (cl-remove-if #'consp params))
         (keyword-params (cl-remove-if #'atom params))
         (all-params (--map (if (consp it) (car it) it) params)))
-    `(cl-defun ,name (,@required-params &key ,@keyword-params)
+    `(cl-defun ,fn-name (,@required-params &key ,@keyword-params)
        ,docstring
-       (lastfm--parse-response2
-        (lastfm--request2 ,(lastfm--requestable-method-name name)
-                          ,auth-type ',all-params ,@all-params)
+       (lastfm--parse-response
+        (lastfm--request ,name
+                         ,auth-type ',all-params ,@all-params)
         ',query-strings))))
-
-;; (lastfm--defmethod artist-get-top-tracks (artist (limit 10) (page 1))
-;;   "Get the ARTIST top tracks."
-;;   :auth ("artist > name" "track > name"))
-
-;; (artist-get-top-tracks "anathema" :limit 2)
 
 (provide 'lastfm)
 
