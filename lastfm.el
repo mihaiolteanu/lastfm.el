@@ -141,24 +141,25 @@ to access your Last.fm account? ")
       (message "Session Key succesfully saved in %s" lastfm--config-file))))
 
 ;;;; API methods definition.
-(defun lastfm--api-fn-name (method)
-  "Turn the METHOD into an API function name.
+(eval-and-compile
+  (defun lastfm--api-fn-name (method)
+    "Turn the METHOD into an API function name.
 Example: artist.addTags -> lastfm-artist-add-tags"
-  (intern
-   (concat "lastfm-"
-           (--reduce (concat acc "-" it)
-                     (--map (downcase it)
-                            (s-split-words (symbol-name method)))))))
+    (intern
+     (concat "lastfm-"
+             (--reduce (concat acc "-" it)
+                       (--map (downcase it)
+                              (s-split-words (symbol-name method)))))))
 
-(defun lastfm--key-from-query-str (query-string)
-  "Use the QUERY-STRING to build a key usable in alists."
-  (make-symbol
-   (s-replace " " ""                    ;remove all extra spaces
-              ;; Some queries contain '>' others only ' '. Replace both of them
-              ;; with '-'.
-              (if (s-contains-p ">" query-string)
-                  (s-replace ">" "-" query-string)
-                (s-replace " " "-" query-string)))))
+  (defun lastfm--key-from-query-str (query-string)
+    "Use the QUERY-STRING to build a key usable in alists."
+    (make-symbol
+     (s-replace " " ""                    ;remove all extra spaces
+                ;; Some queries contain '>' others only ' '. Replace both of them
+                ;; with '-'.
+                (if (s-contains-p ">" query-string)
+                    (s-replace ">" "-" query-string)
+                  (s-replace " " "-" query-string))))))
 
 (defmacro lastfm--defmethod (name params docstring auth query-strings)
   "Build the lastfm API function with the given NAME.
