@@ -137,7 +137,8 @@ to access your Last.fm account? ")
         (with-temp-file lastfm--config-file
           (insert (prin1-to-string config-with-sk))))
       ;; Reload the file after the sk update.
-      (lastfm--set-config-parameters))))
+      (lastfm--set-config-parameters)
+      (message "Session Key succesfully saved in %s" lastfm--config-file))))
 
 ;;;; API methods definition.
 (defun lastfm--api-fn-name (method)
