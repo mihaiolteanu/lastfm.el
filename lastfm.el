@@ -1,6 +1,6 @@
 ;;; lastfm.el --- Last.fm API for Emacs Lisp -*- lexical-binding: t -*-
 
-;; Copyright (C) 2019 Free Software Foundation, Inc.
+;; Copyright (C) 2019 Mihai Olteanu
 
 ;; Author: Mihai Olteanu <mihai_olteanu@fastmail.fm>
 ;; Version: 1.0
