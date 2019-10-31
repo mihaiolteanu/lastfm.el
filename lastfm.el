@@ -153,13 +153,13 @@ Example: artist.addTags -> lastfm-artist-add-tags"
 
   (defun lastfm--key-from-query-str (query-string)
     "Use the QUERY-STRING to build a key usable in alists."
-    (make-symbol
-     (s-replace " " ""                    ;remove all extra spaces
-                ;; Some queries contain '>' others only ' '. Replace both of them
-                ;; with '-'.
-                (if (s-contains-p ">" query-string)
-                    (s-replace ">" "-" query-string)
-                  (s-replace " " "-" query-string))))))
+    (intern
+     (concat ":" (s-replace " " ""
+                            ;; Some queries contain ' > ' others only ' '. Replace
+                            ;; both of them with '-'.
+                            (if (s-contains-p ">" query-string)
+                                (s-replace ">" "-" query-string)
+                              (s-replace " " "-" query-string)))))))
 
 (defmacro lastfm--defmethod (name params docstring auth query-strings)
   "Build the lastfm API function with the given NAME.
