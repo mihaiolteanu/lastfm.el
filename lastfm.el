@@ -522,11 +522,10 @@ RESPONSE string."
                      ;; extracted element.
                      (cons (--map (cons (lastfm--key-from-query-str (car queries))
                                         (elquery-text it))
-                                  (elquery-$ (car queries) raw-response))
+                                  (reverse (elquery-$ (car queries) raw-response)))
                            (helper (cdr queries))))))
         (let ((result (helper query-strings)))
-          (reverse
-           (if (cl-some (lambda (e)
+          (if (cl-some (lambda (e)
                           (= (length e) 1))
                         result)
                ;; At least some of the elements have just one entry. This means
@@ -544,7 +543,7 @@ RESPONSE string."
                  ;; Workaround for -zip returning a cons cell instead of a list
                  ;; when two lists are provided to it.
                  (-zip-with #'list (cl-first result) (cl-second result))
-               (apply #'-zip (helper query-strings))))))))))
+               (apply #'-zip (helper query-strings)))))))))
 
 ;; Generate the README.md documentation, if needed.
 (defun lastfm--generate-documentation (folder)
