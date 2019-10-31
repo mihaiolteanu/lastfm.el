@@ -526,14 +526,25 @@ RESPONSE string."
                            (helper (cdr queries))))))
         (let ((result (helper query-strings)))
           (reverse
-           ;; If the query string looks like '("artist" "song") the result
-           ;; until now would be '((artist1 artist2) (song1 song2)) but
-           ;; '((artist1 songs1) (artist2 song2)) is needed instead.
-           (if (= (length query-strings) 2)
-               ;; Workaround for -zip returning a cons cell instead of a list
-               ;; when two lists are provided to it.
-               (-zip-with #'list (cl-first result) (cl-second result))
-             (apply #'-zip (helper query-strings)))))))))
+           (if (cl-some (lambda (e)
+                          (= (length e) 1))
+                        result)
+               ;; At least some of the elements have just one entry. This means
+               ;; that the elements do not need to be recombined. This is the
+               ;; case for artist-get-info, for example. Tag-names (multiple
+               ;; entries) don't need to be combined with the artist-playcount
+               ;; (just one entry). It would make no sense and besides, only the
+               ;; first tag-name would be added in the final result and the rest
+               ;; would be lost.
+               result
+             ;; If the query string looks like '("artist" "song") the result
+             ;; until now would be '((artist1 artist2) (song1 song2)) but
+             ;; '((artist1 songs1) (artist2 song2)) is needed instead.
+             (if (= (length query-strings) 2)
+                 ;; Workaround for -zip returning a cons cell instead of a list
+                 ;; when two lists are provided to it.
+                 (-zip-with #'list (cl-first result) (cl-second result))
+               (apply #'-zip (helper query-strings))))))))))
 
 ;; Generate the README.md documentation, if needed.
 (defun lastfm--generate-documentation (folder)
