@@ -506,44 +506,34 @@ AUTH, PARAMS and VALUES are only passed allong to
 Each string from the QUERY-STRINGS list of strings contains one
 CSS selector to extract the given HTML elements from the Last.fm
 RESPONSE string."
-  (let* ((raw-response (elquery-read-string response))
-         ;; Only one error expected, if any.
-         (error-str (elquery-text
-                     (cl-first (elquery-$ "error" raw-response)))))
-    (if error-str
-        (error error-str)
-      (cl-labels
-          ((helper (queries)
-                   (if (null queries)
-                       '()
-                     ;; Use the same Last.fm response to extract a different HTML
-                     ;; element each time, according to the current query
-                     ;; string. Build an alist from the query string and the
-                     ;; extracted element.
-                     (cons (--map (elquery-text it)
-                                  (reverse (elquery-$ (car queries) raw-response)))
-                           (helper (cdr queries))))))
-        (let ((result (helper query-strings)))
-          (if (cl-some (lambda (e)
-                         (= (length e) 1))
-                       result)
-              ;; At least some of the elements have just one entry. This means
-              ;; that the elements do not need to be recombined. This is the
-              ;; case for artist-get-info, for example. Tag-names (multiple
-              ;; entries) don't need to be combined with the artist-playcount
-              ;; (just one entry). It would make no sense and besides, only the
-              ;; first tag-name would be added in the final result and the rest
-              ;; would be lost.
-              (-flatten result)
-            ;; If the query string looks like '("artist" "song") the result
-            ;; until now would be '((artist1 artist2) (song1 song2)) but
-            ;; '((artist1 songs1) (artist2 song2)) is needed instead.
-            (mapcar #'-flatten
-                    (if (= (length query-strings) 2)
-                        ;; Workaround for -zip returning a cons cell instead of
-                        ;; a list when two lists are provided to it.
-                        (-zip-with #'list (cl-first result) (cl-second result))
-                      (apply #'-zip (helper query-strings))))))))))
+  (let ((raw-response (elquery-read-string response)))
+    (awhen (elquery-text
+            (cl-first (elquery-$ "error" raw-response)))
+      (error it))
+    (let ((parsed-response
+           ;; Parse the last.fm raw response with each of the query-strings
+           ;; and extract the html text elements.
+           (mapcar (lambda (query-str)
+                     (reverse  ;Keep the original ordering.
+                      (--map (elquery-text it)
+                             (elquery-$ query-str raw-response))))
+                   query-strings)))
+
+      ;; Transform a response of the type '((artist1 artist2) (track1 track2))
+      ;; into '((artist1 track1) (artist2 track2)). 
+      (if (cl-some (lambda (e)
+                     (= (length e) 1))
+                   parsed-response)
+          ;; Responses with only one entry, such as artist-info, don't need to
+          ;; be transformed but returned as a simple list of strings.
+          (-flatten parsed-response)
+        (if (= (length query-strings) 2)
+            ;; Workaround for -zip returning a cons cell instead of
+            ;; a list when only two lists are provided to it.
+            (-zip-with #'list
+                       (cl-first parsed-response)
+                       (cl-second parsed-response))
+          (apply #'-zip parsed-response))))))
 
 ;; Generate the README.md documentation, if needed.
 (defun lastfm--generate-documentation (folder)
