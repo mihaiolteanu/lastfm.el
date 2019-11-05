@@ -64,8 +64,8 @@ Only used for development purposes."
 
 (defconst lastfm--api-doc-string ""
   "Holds the documentation for all exported functions into this variable.
-It is filled at load time by each lastfm--defmethod and saved in
-README_api.md if lastfm-enable-doc-generation is t.")
+It is filled at load time by each `lastfm--defmethod' and saved in
+README_api.md if `lastfm-enable-doc-generation' is t.")
 
 ;;;; Configuration and setup
 (defconst lastfm--url "http://ws.audioscrobbler.com/2.0/"
@@ -119,7 +119,7 @@ token or sk.  Return the value of that."
 (defun lastfm-generate-session-key ()
   "Generate a session key and save it in the .lastfmrc file.
 The user needs to grant Last.fm access to his/her application.
-Both lastfm-auth-get-token and lastfm-auth-get-session methods used
+Both `lastfm-auth-get-token' and `lastfm-auth-get-session' methods used
 here are generated with 'lastfm--defmethod'."
   ;; Reload after the user updated the empty .lastfmrc file.
   (lastfm--set-config-parameters)
@@ -519,7 +519,7 @@ RESPONSE string."
                    query-strings)))
 
       ;; Transform a response of the type '((artist1 artist2) (track1 track2))
-      ;; into '((artist1 track1) (artist2 track2)). 
+      ;; into '((artist1 track1) (artist2 track2)).
       (if (cl-some (lambda (e)
                      (= (length e) 1))
                    parsed-response)
