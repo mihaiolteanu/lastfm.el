@@ -520,8 +520,7 @@ RESPONSE string."
                      ;; element each time, according to the current query
                      ;; string. Build an alist from the query string and the
                      ;; extracted element.
-                     (cons (--map (list (lastfm--key-from-query-str (car queries))
-                                        (elquery-text it))
+                     (cons (--map (elquery-text it)
                                   (reverse (elquery-$ (car queries) raw-response)))
                            (helper (cdr queries))))))
         (let ((result (helper query-strings)))
