@@ -10,16 +10,15 @@ user preferences,
 
 ```common-lisp
 (lastfm-tag-get-top-tracks "rock" :limit 3)
-
-=> (((artist-name . "Nirvana")     (track-name . "Smells Like Teen Spirit"))
-    ((artist-name . "The Killers") (track-name . "Mr Brightside"))
-    ((artist-name . "Oasis")       (track-name . "Wonderwall")))
+=> (("Nirvana" "Smells Like Teen Spirit")
+    ("The Killers" "Mr Brightside")
+    ("Oasis" "Wonderwall"))
 ```
-or to add a track to your list of loved songs,
+Or add a track to your list of loved songs,
 
 ```common-lisp
 (lastfm-track-love "anathema" "springfield")
-=> (((lfm . "")))
+=> ("")
 ```
 
 See the API below for the complete functionality.

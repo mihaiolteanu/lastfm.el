@@ -27,21 +27,21 @@
 ;; `https://www.last.fm/api/'.  An API account, obtainable for free from
 ;; Last.fm, is needed to use the majority of provided services.  A one-time
 ;; authentication process is needed to access the rest of the methods.
-
+;; 
 ;; Example usage to get the top tracks tagged as "rock" from last.fm, based on
 ;; user preferences,
-
+;; 
 ;; (lastfm-tag-get-top-tracks "rock" :limit 3)
-;; => (((artist-name . "Nirvana")     (track-name . "Smells Like Teen Spirit"))
-;;     ((artist-name . "The Killers") (track-name . "Mr Brightside"))
-;;     ((artist-name . "Oasis")       (track-name . "Wonderwall")))
-
-;; or to add a track to your list of loved songs,
-
+;; => (("Nirvana" "Smells Like Teen Spirit")
+;;     ("The Killers" "Mr Brightside")
+;;     ("Oasis" "Wonderwall"))
+;; 
+;; Or add a track to your list of loved songs,
+;; 
 ;; (lastfm-track-love "anathema" "springfield")
-;; => (((lfm . "")))
+;; => ("")
 
-;; See the package URL for complete documentation and installation instructions.
+;; See the package URL for the full Last.fm API documentation.
 
 ;;; Code:
 
@@ -151,15 +151,14 @@ Example: artist.addTags -> lastfm-artist-add-tags"
                        (--map (downcase it)
                               (s-split-words (symbol-name method)))))))
 
-  (defun lastfm--key-from-query-str (query-string)
-    "Use the QUERY-STRING to build a key usable in alists."
-    (intern
-     (concat ":" (s-replace " " ""
-                            ;; Some queries contain ' > ' others only ' '. Replace
-                            ;; both of them with '-'.
-                            (if (s-contains-p ">" query-string)
-                                (s-replace ">" "-" query-string)
-                              (s-replace " " "-" query-string)))))))
+  (defun lastfm--cleanup-query-string (str)
+    "Transform the STR query string for doc purposes."
+    (s-replace " " ""
+               ;; Some queries contain ' > ' others only ' '. Replace
+               ;; both of them with '-'.
+               (if (s-contains-p ">" str)
+                   (s-replace ">" "-" str)
+                 (s-replace " " "-" str)))))
 
 (defmacro lastfm--defmethod (name params docstring auth query-strings)
   "Build the lastfm API function with the given NAME.
@@ -206,7 +205,7 @@ extract and to build the request response."
                      (format "**%s** %s\n\n    %s\n    => %s\n\n"
                              (symbol-name ',fn-name)
                              ',all-params-cl ,docstring
-                             ',(--map (lastfm--key-from-query-str it)
+                             ',(--map (lastfm--cleanup-query-string it)
                                       query-strings))))
        ;; Memoize, if possible.
        (when (eq ,auth :no)
