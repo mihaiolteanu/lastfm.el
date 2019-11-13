@@ -60,14 +60,6 @@ Most of the functions are memoized. Calling the same function with the same
 arguments won't make a call to Last.fm, except on the first call. This speeds
 things up a bit.
 
-Most of the functions return a list with multiple entries. Each entry is again a
-list of conses. The `car` of this cons is the attribute returned and the `cdr`
-is the value. In the documentation string this appears as `=> (track-name
-playcount listeners)`, for example, which means the function will return a list,
-where each element is a list of conses with `track-name`, `playcount` and
-`listeners` as the `car`s. See the "duran duran" example in the overview
-section.
-
 # Complete API
 **lastfm-album-get-info** (artist album)
 
