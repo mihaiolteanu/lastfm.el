@@ -550,8 +550,12 @@ Usually this step is done by the developer(s)."
       (insert-file-contents
        (expand-file-name "README_overview.md" folder)))))
 
-;; Use the package location folder.
-(lastfm--generate-documentation (file-name-directory load-file-name))
+(lastfm--generate-documentation
+ (if load-file-name
+     ;; Package was evaluated by calling load.
+     (file-name-directory load-file-name)
+   ;; Package was evaluated by calling eval-buffer.
+   default-directory))
 
 (provide 'lastfm)
 
