@@ -57,7 +57,7 @@
   "Customize Last.fm API."
   :group 'music)
 
-(defcustom lastfm-enable-doc-generation 'nil
+(defcustom lastfm-enable-doc-generation nil
   "If t, generate markdown documentation at load time.
 Only used for development purposes."
   :type 'boolean
