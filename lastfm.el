@@ -1,6 +1,6 @@
 ;;; lastfm.el --- Last.fm API for Emacs Lisp -*- lexical-binding: t -*-
 
-;; Copyright (C) 2019 Mihai Olteanu
+;; Copyright (C) 2019-2020 Mihai Olteanu
 
 ;; Author: Mihai Olteanu <mihai_olteanu@fastmail.fm>
 ;; Version: 1.0
@@ -218,7 +218,7 @@ extract and to build the request response."
 
 (lastfm--defmethod album.getInfo (artist album)
   "Get the metadata and tracklist for an album on Last.fm using the album name."
-  :no ("track > name"))
+  :no ("track artist name" "track > name" "duration"))
 
 (lastfm--defmethod album.getTags (artist album)
   "Get the tags applied by an individual user to an album on Last.fm."
@@ -246,7 +246,7 @@ extract and to build the request response."
 
 (lastfm--defmethod artist.getInfo (artist)
   "Get the metadata for an artist. Includes biography, max 300 characters."
-  :no ("bio summary" "listeners" "playcount"))
+  :no ("bio summary" "listeners" "playcount" "similar artist name" "tags tag name"))
 
 (lastfm--defmethod artist.getSimilar (artist (limit 10) (user lastfm--username))
   "Get all the artists similar to this artist."
@@ -266,7 +266,7 @@ extract and to build the request response."
 
 (lastfm--defmethod artist.getTopTracks (artist (limit 10) (page 1))
   "Get the top tracks by an artist, ordered by popularity."
-  :no ("track > name" "playcount" "listeners"))
+  :no ("track artist name" "track > name" "playcount" "listeners"))
 
 (lastfm--defmethod artist.removeTag (artist tag)
   "Remove a user's tag from an artist."

@@ -64,7 +64,7 @@ things up a bit.
 **lastfm-album-get-info** (artist album)
 
     Get the metadata and tracklist for an album on Last.fm using the album name.
-    => (track-name)
+    => (track-artist-name track-name duration)
 
 **lastfm-album-get-tags** (artist album)
 
@@ -99,7 +99,7 @@ things up a bit.
 **lastfm-artist-get-info** (artist)
 
     Get the metadata for an artist. Includes biography, max 300 characters.
-    => (bio-summary listeners playcount)
+    => (bio-summary listeners playcount similar-artist-name tags-tag-name)
 
 **lastfm-artist-get-similar** (artist &key (limit 10) (user lastfm--username))
 
@@ -124,7 +124,7 @@ things up a bit.
 **lastfm-artist-get-top-tracks** (artist &key (limit 10) (page 1))
 
     Get the top tracks by an artist, ordered by popularity.
-    => (track-name playcount listeners)
+    => (track-artist-name track-name playcount listeners)
 
 **lastfm-artist-remove-tag** (artist tag)
 
