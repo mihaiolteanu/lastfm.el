@@ -72,18 +72,11 @@ README_api.md if `lastfm-enable-doc-generation' is t.")
 (defconst lastfm--url "http://ws.audioscrobbler.com/2.0/"
   "The URL for the last.fm API version 2.")
 
-(defconst lastfm--config-file
-  (let ((f (concat (xdg-config-home) "/.lastfmrc")))
-    (or (file-exists-p f)
-        (with-temp-file f
-          (insert "(CONFIG
-  :API-KEY \"\"
-  :SHARED-SECRET \"\"
-  :USERNAME \"\")")))
-    f)
-  "The user config file for this library.
-The file is generated when the library is loaded the first time,
-if it doesn't already exists.")
+(defconst lastfm--config-file-name "/.lastfmrc"
+  "Name of the user config file for lastfm.")
+
+(defconst lastfm--config-file-path nil
+  "Complete path of the user config file for lastfm.")
 
 ;; The values of these configs are taken from the user config file.
 (defconst lastfm--api-key nil)
@@ -91,10 +84,25 @@ if it doesn't already exists.")
 (defconst lastfm--username nil)
 (defconst lastfm--sk nil)
 
+(defun lastfm--config-file ()
+  "Return the config file or create it if it doesn't exits."
+  (unless lastfm--config-file-path
+    (let ((f (concat (xdg-config-home)
+                     lastfm--config-file-name)))
+      (unless (file-exists-p f)
+        (message f)
+        (with-temp-file f
+          (insert "(CONFIG
+  :API-KEY \"\"
+  :SHARED-SECRET \"\"
+  :USERNAME \"\")")))
+      (setf lastfm--config-file-path f)))
+  lastfm--config-file-path)
+
 (defun lastfm--read-config-file ()
   "Return the config file contents as a Lisp object."
   (with-temp-buffer
-    (insert-file-contents lastfm--config-file)
+    (insert-file-contents (lastfm--config-file))
     (read (buffer-string))))
 
 (defun lastfm--set-config-parameters ()
@@ -109,7 +117,29 @@ if it doesn't already exists.")
                (cl-remove-if #'stringp config)
                (cl-remove-if #'symbolp config))))
 
-(lastfm--set-config-parameters)         ;set params on start-up.
+(defun lastfm--api-key ()
+  "Return the api key or read it from the config file."
+  (unless lastfm--api-key
+    (lastfm--set-config-parameters))
+  lastfm--api-key)
+
+(defun lastfm--shared-secret ()
+  "Return the shared secret or read it from the config file."
+  (unless lastfm--shared-secret
+    (lastfm--set-config-parameters))
+  lastfm--shared-secret)
+
+(defun lastfm--username ()
+  "Return the username or read it from the config file."
+  (unless lastfm--username
+    (lastfm--set-config-parameters))
+  lastfm--username)
+
+(defun lastfm--sk ()
+  "Return the session key or read it from the config file."
+  (unless lastfm--sk
+    (lastfm--set-config-parameters))
+  lastfm--sk)
 
 (defun lastfm--first-value (resp)
   "Extract the very first value from the RESP.
@@ -127,7 +157,7 @@ here are generated with 'lastfm--defmethod'."
   (let ((token (lastfm--first-value (lastfm-auth-get-token))))
     ;; Ask the user to allow access.
     (browse-url (concat "http://www.last.fm/api/auth/?api_key="
-                        lastfm--api-key
+                        (lastfm--api-key)
                         "&token=" token))
     (when (yes-or-no-p "Did you grant the application persmission
 to access your Last.fm account? ")
@@ -135,11 +165,11 @@ to access your Last.fm account? ")
       (let* ((sk (lastfm--first-value (lastfm-auth-get-session token)))
              (config (lastfm--read-config-file))
              (config-with-sk (append config (list :SK sk))))
-        (with-temp-file lastfm--config-file
+        (with-temp-file (lastfm--config-file)
           (insert (prin1-to-string config-with-sk))))
       ;; Reload the file after the sk update.
       (lastfm--set-config-parameters)
-      (message "Session Key succesfully saved in %s" lastfm--config-file))))
+      (message "Session Key succesfully saved in %s" (lastfm--config-file)))))
 
 ;;;; API methods definition.
 (eval-and-compile
@@ -248,7 +278,7 @@ extract and to build the request response."
   "Get the metadata for an artist. Includes biography, max 300 characters."
   :no ("bio summary" "listeners" "playcount" "similar artist name" "tags tag name"))
 
-(lastfm--defmethod artist.getSimilar (artist (limit 10) (user lastfm--username))
+(lastfm--defmethod artist.getSimilar (artist (limit 10) (user (lastfm--username)))
   "Get all the artists similar to this artist."
   :no ("artist name"))
 
@@ -304,7 +334,7 @@ extract and to build the request response."
   "Get the most popular tracks on Last.fm last week by country."
   :no ("artist > name" "track > name" "playcount"))
 
-(lastfm--defmethod library.getArtists ((user lastfm--username) (limit 50) (page 1))
+(lastfm--defmethod library.getArtists ((user (lastfm--username)) (limit 50) (page 1))
   "A list of all the artists in a user's library."
   :no ("artist name" "playcount" "tagcount"))
 
@@ -386,56 +416,56 @@ extract and to build the request response."
   "Get a list of the user's friends on Last.fm."
   :no ("name" "realname" "country" "age" "gender" "subscriber" "playcount"))
 
-(lastfm--defmethod user.getInfo ((user lastfm--username))
+(lastfm--defmethod user.getInfo ((user (lastfm--username)))
   "Get information about a USER profile."
   :no ("name" "realname" "country" "age" "gender" "subscriber" "playcount"))
 
-(lastfm--defmethod user.getLovedTracks ((user lastfm--username) (limit 10) (page 1))
+(lastfm--defmethod user.getLovedTracks ((user (lastfm--username)) (limit 10) (page 1))
   "Get the last LIMIT number of tracks loved by a USER."
   :no ("artist > name" "track > name"))
 
 (lastfm--defmethod user.getPersonalTags
-  (tag taggingtype (user lastfm--username) (limit 10) (page 1))
+  (tag taggingtype (user (lastfm--username)) (limit 10) (page 1))
   "Get the user's personal TAGs."
   :no ("artist name"))
 
 (lastfm--defmethod user.getRecentTracks
-  ((user lastfm--username) (limit 10) (page 1) (from nil) (to nil) (extended 0))
+  ((user (lastfm--username)) (limit 10) (page 1) (from nil) (to nil) (extended 0))
   "Get a list of the recent tracks listened to by this user."
   :no ("track > artist" "track > name" "date"))
 
 (lastfm--defmethod user.getTopAlbums
-  ((user lastfm--username) (period nil) (limit nil) (page nil))
+  ((user (lastfm--username)) (period nil) (limit nil) (page nil))
   "Get the top albums listened to by a user"
   :no ("artist > name" "album > name" "playcount"))
 
 (lastfm--defmethod user.getTopArtists
-  ((user lastfm--username) (period nil) (limit nil) (page nil))
+  ((user (lastfm--username)) (period nil) (limit nil) (page nil))
   "Get the top artists listened to by a user."
   :no ("artist name" "playcount"))
 
 (lastfm--defmethod user.getTopTags
-  ((user lastfm--username) (limit 10))
+  ((user (lastfm--username)) (limit 10))
   "Get the top tags used by this user."
   :no ("tag name"))
 
 (lastfm--defmethod user.getTopTracks
-  ((user lastfm--username) (period nil) (limit nil) (page nil))
+  ((user (lastfm--username)) (period nil) (limit nil) (page nil))
   "Get the top tracks listened to by a user. "
   :no ("artist > name" "track > name" "playcount"))
 
 (lastfm--defmethod user.getWeeklyAlbumChart
-  ((user lastfm--username) (from nil) (to nil))
+  ((user (lastfm--username)) (from nil) (to nil))
   "Get an album chart for a user profile, for a given date range."
   :no ("album > artist" "album > name" "playcount"))
 
 (lastfm--defmethod user.getWeeklyArtistChart
-  ((user lastfm--username) (from nil) (to nil))
+  ((user (lastfm--username)) (from nil) (to nil))
   "Get an artist chart for a user profile, for a given date range."
   :no ("artist > name" "playcount"))
 
 (lastfm--defmethod user.getWeeklyTrackChart
-  ((user lastfm--username) (from nil) (to nil))
+  ((user (lastfm--username)) (from nil) (to nil))
   "Get a track chart for a user profile, for a given date range."
   :no ("track > artist" "track > name" "playcount"))
 
@@ -448,7 +478,7 @@ ampersand symbols between them."
     (mapc (lambda (s)
             (setf res (concat res (car s) (cdr s))))
           params)
-    (concat res lastfm--shared-secret)))
+    (concat res (lastfm--shared-secret))))
 
 (defun lastfm--build-params (method auth params values)
   "Build the Last.fm POST request for the given METHOD.
@@ -460,7 +490,7 @@ request to Last.fm and are grouped, one by one, with the given
 VALUES."
   (let ((result
          `(;; The api key and method is needed for all calls.
-           ("api_key" . ,lastfm--api-key)
+           ("api_key" . ,(lastfm--api-key))
            ("method" . ,method)
            ;; Pair the user supplied values with the method parameters.  If no
            ;; value supplied for a given param, do not include it in the
@@ -474,7 +504,7 @@ VALUES."
     ;; The Session Key (SK) is needed for all auth services, but not for
     ;; the services used to actually obtain the SK.
     (when (eq auth :yes)
-      (push `("sk" . ,lastfm--sk) result))
+      (push `("sk" . ,(lastfm--sk)) result))
     ;; If the method needs authentication, then signing is necessary.
     (when (or (eq auth :sk)
               (eq auth :yes))
