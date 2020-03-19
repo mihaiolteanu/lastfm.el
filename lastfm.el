@@ -158,11 +158,11 @@ here are generated with 'lastfm--defmethod'."
     ;; Ask the user to allow access.
     (browse-url (concat "http://www.last.fm/api/auth/?api_key="
                         (lastfm--api-key)
-                        "&token=" token))
+                        "&token=" (car token)))
     (when (yes-or-no-p "Did you grant the application persmission
 to access your Last.fm account? ")
       ;; If permission granted, get the sk and update the config file.
-      (let* ((sk (lastfm--first-value (lastfm-auth-get-session token)))
+      (let* ((sk (lastfm--first-value (lastfm-auth-get-session (car token))))
              (config (lastfm--read-config-file))
              (config-with-sk (append config (list :SK sk))))
         (with-temp-file (lastfm--config-file)
