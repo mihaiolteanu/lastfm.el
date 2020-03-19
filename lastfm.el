@@ -504,7 +504,7 @@ VALUES."
     ;; The Session Key (SK) is needed for all auth services, but not for
     ;; the services used to actually obtain the SK.
     (when (eq auth :yes)
-      (push `("sk" . ,(lastfm--sk)) result))
+      (push `("sk" . ,(car lastfm--sk)) result))
     ;; If the method needs authentication, then signing is necessary.
     (when (or (eq auth :sk)
               (eq auth :yes))
