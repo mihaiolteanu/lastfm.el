@@ -141,12 +141,6 @@ README_api.md if `lastfm-enable-doc-generation' is t.")
     (lastfm--set-config-parameters))
   lastfm--sk)
 
-(defun lastfm--first-value (resp)
-  "Extract the very first value from the RESP.
-RESP usually contains a single Last.fm response element, like a
-token or sk.  Return the value of that."
-  (cdaar resp))
-
 (defun lastfm-generate-session-key ()
   "Generate a session key and save it in the .lastfmrc file.
 The user needs to grant Last.fm access to his/her application.
@@ -154,15 +148,15 @@ Both `lastfm-auth-get-token' and `lastfm-auth-get-session' methods used
 here are generated with 'lastfm--defmethod'."
   ;; Reload after the user updated the empty .lastfmrc file.
   (lastfm--set-config-parameters)
-  (let ((token (lastfm--first-value (lastfm-auth-get-token))))
+  (let ((token (car (lastfm-auth-get-token))))
     ;; Ask the user to allow access.
     (browse-url (concat "http://www.last.fm/api/auth/?api_key="
                         (lastfm--api-key)
-                        "&token=" (car token)))
+                        "&token=" token))
     (when (yes-or-no-p "Did you grant the application persmission
 to access your Last.fm account? ")
       ;; If permission granted, get the sk and update the config file.
-      (let* ((sk (lastfm--first-value (lastfm-auth-get-session (car token))))
+      (let* ((sk (car (lastfm-auth-get-session token)))
              (config (lastfm--read-config-file))
              (config-with-sk (append config (list :SK sk))))
         (with-temp-file (lastfm--config-file)
@@ -504,7 +498,7 @@ VALUES."
     ;; The Session Key (SK) is needed for all auth services, but not for
     ;; the services used to actually obtain the SK.
     (when (eq auth :yes)
-      (push `("sk" . ,(car lastfm--sk)) result))
+      (push `("sk" . ,(lastfm--sk)) result))
     ;; If the method needs authentication, then signing is necessary.
     (when (or (eq auth :sk)
               (eq auth :yes))
