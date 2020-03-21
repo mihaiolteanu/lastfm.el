@@ -25,7 +25,7 @@ See the API below for the complete functionality.
 
 # Install
 Follow the instructions on
-[https://www.last.fm/api/](https://www.last.fm/api/'.) to obtain an API key and
+[https://www.last.fm/api/](https://www.last.fm/api/) to obtain an API key and
 a Shared Secret.
 
 lastfm.el keeps a config file, `.lastfmrc` in your `xdg-config-home` folder
