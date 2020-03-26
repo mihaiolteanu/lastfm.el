@@ -101,7 +101,7 @@ things up a bit.
     Get the metadata for an artist. Includes biography, max 300 characters.
     => (bio-summary listeners playcount similar-artist-name tags-tag-name)
 
-**lastfm-artist-get-similar** (artist &key (limit 10) (user lastfm--username))
+**lastfm-artist-get-similar** (artist &key (limit 10) (user (lastfm--username)))
 
     Get all the artists similar to this artist.
     => (artist-name)
@@ -171,7 +171,7 @@ things up a bit.
     Get the most popular tracks on Last.fm last week by country.
     => (artist-name track-name playcount)
 
-**lastfm-library-get-artists** (&key (user lastfm--username) (limit 50) (page 1))
+**lastfm-library-get-artists** (&key (user (lastfm--username)) (limit 50) (page 1))
 
     A list of all the artists in a user's library.
     => (artist-name playcount tagcount)
@@ -271,57 +271,57 @@ things up a bit.
     Get a list of the user's friends on Last.fm.
     => (name realname country age gender subscriber playcount)
 
-**lastfm-user-get-info** (&key (user lastfm--username))
+**lastfm-user-get-info** (&key (user (lastfm--username)))
 
     Get information about a USER profile.
     => (name realname country age gender subscriber playcount)
 
-**lastfm-user-get-loved-tracks** (&key (user lastfm--username) (limit 10) (page 1))
+**lastfm-user-get-loved-tracks** (&key (user (lastfm--username)) (limit 10) (page 1))
 
     Get the last LIMIT number of tracks loved by a USER.
     => (artist-name track-name)
 
-**lastfm-user-get-personal-tags** (tag taggingtype &key (user lastfm--username) (limit 10) (page 1))
+**lastfm-user-get-personal-tags** (tag taggingtype &key (user (lastfm--username)) (limit 10) (page 1))
 
     Get the user's personal TAGs.
     => (artist-name)
 
-**lastfm-user-get-recent-tracks** (&key (user lastfm--username) (limit 10) (page 1) (from nil) (to nil) (extended 0))
+**lastfm-user-get-recent-tracks** (&key (user (lastfm--username)) (limit 10) (page 1) (from nil) (to nil) (extended 0))
 
     Get a list of the recent tracks listened to by this user.
     => (track-artist track-name date)
 
-**lastfm-user-get-top-albums** (&key (user lastfm--username) (period nil) (limit nil) (page nil))
+**lastfm-user-get-top-albums** (&key (user (lastfm--username)) (period nil) (limit nil) (page nil))
 
     Get the top albums listened to by a user
     => (artist-name album-name playcount)
 
-**lastfm-user-get-top-artists** (&key (user lastfm--username) (period nil) (limit nil) (page nil))
+**lastfm-user-get-top-artists** (&key (user (lastfm--username)) (period nil) (limit nil) (page nil))
 
     Get the top artists listened to by a user.
     => (artist-name playcount)
 
-**lastfm-user-get-top-tags** (&key (user lastfm--username) (limit 10))
+**lastfm-user-get-top-tags** (&key (user (lastfm--username)) (limit 10))
 
     Get the top tags used by this user.
     => (tag-name)
 
-**lastfm-user-get-top-tracks** (&key (user lastfm--username) (period nil) (limit nil) (page nil))
+**lastfm-user-get-top-tracks** (&key (user (lastfm--username)) (period nil) (limit nil) (page nil))
 
     Get the top tracks listened to by a user. 
     => (artist-name track-name playcount)
 
-**lastfm-user-get-weekly-album-chart** (&key (user lastfm--username) (from nil) (to nil))
+**lastfm-user-get-weekly-album-chart** (&key (user (lastfm--username)) (from nil) (to nil))
 
     Get an album chart for a user profile, for a given date range.
     => (album-artist album-name playcount)
 
-**lastfm-user-get-weekly-artist-chart** (&key (user lastfm--username) (from nil) (to nil))
+**lastfm-user-get-weekly-artist-chart** (&key (user (lastfm--username)) (from nil) (to nil))
 
     Get an artist chart for a user profile, for a given date range.
     => (artist-name playcount)
 
-**lastfm-user-get-weekly-track-chart** (&key (user lastfm--username) (from nil) (to nil))
+**lastfm-user-get-weekly-track-chart** (&key (user (lastfm--username)) (from nil) (to nil))
 
     Get a track chart for a user profile, for a given date range.
     => (track-artist track-name playcount)
