@@ -531,8 +531,8 @@ Each string from the QUERY-STRINGS list of strings contains one
 CSS selector to extract the given HTML elements from the Last.fm
 RESPONSE string."
   (let ((raw-response (elquery-read-string response)))
-    (awhen (elquery-text
-            (cl-first (elquery-$ "error" raw-response)))
+    (awhen (s-present-p (elquery-text
+                         (cl-first (elquery-$ "error" raw-response))))
       (error it))
     (let ((parsed-response
            ;; Parse the last.fm raw response with each of the query-strings
