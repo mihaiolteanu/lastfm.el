@@ -514,7 +514,7 @@ VALUES."
   "Send and return the Last.fm request for METHOD.
 AUTH, PARAMS and VALUES are only passed allong to
 'lastfm--build-params'.  See the documentation for that method."
-  (let (resp)
+  (let (resp (request-curl-options '("-d\"\"")))
     (request lastfm--url
              :params (lastfm--build-params method auth params values)
              :parser 'buffer-string
