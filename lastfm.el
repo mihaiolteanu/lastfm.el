@@ -514,11 +514,30 @@ VALUES."
   "Send and return the Last.fm request for METHOD.
 AUTH, PARAMS and VALUES are only passed allong to
 'lastfm--build-params'.  See the documentation for that method."
-  (let (resp (request-curl-options '("-d" "")))
+  (let ((data (lastfm--build-params method auth params values)))    
+    (if (eql auth :yes)
+        (lastfm--post-request data)
+      (lastfm--get-request data))))
+
+(defun lastfm--post-request (data)
+  "POST lastfm request for DATA."
+  (let (resp)
     (request lastfm--url
-             :params (lastfm--build-params method auth params values)
-             :parser 'buffer-string
              :type   "POST"
+             :data   data
+             :parser 'buffer-string             
+             :sync   t
+             :complete (cl-function
+                        (lambda (&key data &allow-other-keys)
+                          (setq resp data))))
+    resp))
+
+(defun lastfm--get-request (data)
+  "GET lastfm request for DATA."  
+  (let (resp)
+    (request lastfm--url
+             :params data
+             :parser 'buffer-string
              :sync   t
              :complete (cl-function
                         (lambda (&key data &allow-other-keys)
