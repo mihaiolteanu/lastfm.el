@@ -290,7 +290,7 @@ extract and to build the request response."
 
 (lastfm--defmethod artist.getTopTracks (artist (limit 10) (page 1))
   "Get the top tracks by an artist, ordered by popularity."
-  :no ("track artist name" "track > name" "playcount" "listeners"))
+  :no ("artist name" "name" "playcount" "listeners"))
 
 (lastfm--defmethod artist.removeTag (artist tag)
   "Remove a user's tag from an artist."
